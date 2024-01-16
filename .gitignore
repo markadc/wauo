@@ -1,0 +1,4 @@
+.idea/
+.vscode
+*.py[cod]
+.DS_Store
