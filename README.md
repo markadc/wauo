@@ -23,7 +23,7 @@ resp = s.send(url)
 
 ## POST
 
-### 使用data参数
+#### 使用data参数
 
 ```python
 api = 'https://xxx.xxx.xxx'
@@ -34,7 +34,7 @@ data = {
 resp = s.send(api, data=data)
 ```
 
-### 使用json参数
+#### 使用json参数
 
 ```python
 api = 'https://xxx.xxx.xxx'
@@ -47,7 +47,7 @@ resp = s.send(api, json=json)
 
 ## 限制响应
 
-### 限制响应码
+#### 限制响应码
 
 - 如果响应码不在codes范围里则抛弃响应
 
@@ -55,7 +55,7 @@ resp = s.send(api, json=json)
 resp = s.send('https://www.baidu.com/xxx', codes=[200, 301, 302])
 ```
 
-### 限制响应内容
+#### 限制响应内容
 
 - 如果checker返回False则抛弃响应
 
