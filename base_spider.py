@@ -30,7 +30,6 @@ def retry(func):
 class BaseSpider:
     def __init__(self, cookie: str = None, session=False):
         self.cookie_str = cookie or ''
-        self.cookie_dict = self.cookie_to_dict(cookie) if cookie else {}
         self.ua = UserAgent()
         self.req = requests.Session() if session else requests
 
@@ -70,9 +69,9 @@ class BaseSpider:
         """
         headers = headers or self.get_headers()
         headers.setdefault('User-Agent', self.ua.random)
+        headers.setdefault('Cookie', cookie if cookie else self.cookie_str)
         proxies = proxies or self.get_proxies()
-        cookie_dict = self.cookie_to_dict(cookie) if cookie else self.cookie_dict
-        same = dict(headers=headers, cookies=cookie_dict, proxies=proxies, timeout=timeout)
+        same = dict(headers=headers, proxies=proxies, timeout=timeout)
 
         if not (data or json):
             response = self.req.get(url, **same, **kwargs)
