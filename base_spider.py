@@ -59,7 +59,7 @@ class BaseSpider:
     @retry
     def send(
             self, url: str, headers: dict = None, proxies: dict = None, timeout=3,
-            params: dict = None, data: dict = None, json: dict = None,
+            data: dict = None, json: dict = None,
             cookie: str = None, codes: list = None, checker: Callable = None,
             **kwargs
     ):
@@ -76,7 +76,7 @@ class BaseSpider:
 
         same = dict(headers=headers, proxies=proxies, timeout=timeout)
         if not (data or json):
-            response = self.req.get(url, params=params, **same, **kwargs)
+            response = self.req.get(url, **same, **kwargs)
         else:
             response = self.req.post(url, data=data, json=json, **same, **kwargs)
 
