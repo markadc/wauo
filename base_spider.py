@@ -58,23 +58,25 @@ class BaseSpider:
 
     @retry
     def send(
-            self, url: str, headers: dict = None, cookie: str = None, proxies: dict = None,
-            data: dict = None, json: dict = None,
-            timeout=6,
-            codes: list = None, checker: Callable = None,
+            self, url: str, headers: dict = None, proxies: dict = None, timeout=3,
+            params: dict = None, data: dict = None, json: dict = None,
+            cookie: str = None, codes: list = None, checker: Callable = None,
             **kwargs
     ):
         """
         发送请求，获取响应。默认为GET请求，如果传入了data或者json参数则为POST请求。
         """
+        proxies = proxies or self.get_proxies()
         headers = headers or self.get_headers()
         headers.setdefault('User-Agent', self.ua.random)
-        headers.setdefault('Cookie', cookie if cookie else self.cookie_str)
-        proxies = proxies or self.get_proxies()
-        same = dict(headers=headers, proxies=proxies, timeout=timeout)
+        if cookie:
+            headers.setdefault('Cookie', cookie)
+        elif self.cookie_str:
+            headers.setdefault('Cookie', self.cookie_str)
 
+        same = dict(headers=headers, proxies=proxies, timeout=timeout)
         if not (data or json):
-            response = self.req.get(url, **same, **kwargs)
+            response = self.req.get(url, params=params, **same, **kwargs)
         else:
             response = self.req.post(url, data=data, json=json, **same, **kwargs)
 
