@@ -9,9 +9,9 @@
 # 如何使用？
 
 ```python
-from wauo import BaseSpider
+from wauo import WauoSpider
 
-s = BaseSpider()
+s = WauoSpider()
 ```
 
 ## GET
