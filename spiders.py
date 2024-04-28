@@ -115,7 +115,7 @@ class WauoSpider(BaseSpider):
             headers.setdefault('Cookie', self.cookie)
 
         same = dict(headers=headers, proxies=proxies, timeout=timeout)
-        if not (data or json):
+        if data is None and json is None:
             response = self.req.get(url, **same, **kwargs)
         else:
             response = self.req.post(url, data=data, json=json, **same, **kwargs)
