@@ -11,14 +11,15 @@
 ```python
 from wauo import WauoSpider
 
-s = WauoSpider()
+spider = WauoSpider()
 ```
 
 ## GET
 
 ```python
-url = 'https://xxx.xxx.xxx'
-resp = s.send(url)
+url = 'https://github.com/markadc'
+resp = spider.send(url)
+print(resp.text)
 ```
 
 ## POST
@@ -26,23 +27,23 @@ resp = s.send(url)
 #### 使用data参数
 
 ```python
-api = 'https://xxx.xxx.xxx'
+api = 'https://github.com/markadc'
 data = {
     'key1': 'value1',
     'key2': 'value2'
 }
-resp = s.send(api, data=data)
+resp = spider.send(api, data=data)
 ```
 
 #### 使用json参数
 
 ```python
-api = 'https://xxx.xxx.xxx'
+api = 'https://github.com/markadc'
 json = {
     'key1': 'value1',
     'key2': 'value2'
 }
-resp = s.send(api, json=json)
+resp = spider.send(api, json=json)
 ```
 
 ## 限制响应
@@ -52,7 +53,7 @@ resp = s.send(api, json=json)
 - 如果响应码不在codes范围里则抛弃响应
 
 ```python
-resp = s.send('https://www.baidu.com/xxx', codes=[200, 301, 302])
+resp = spider.send('https://github.com/markadc', codes=[200, 301, 302])
 ```
 
 #### 限制响应内容
@@ -66,5 +67,19 @@ def is_ok(response):
         return False
 
 
-resp = s.send('https://xxx.xxx.xxx', checker=is_ok)
+resp = spider.send('https://github.com/markadc', checker=is_ok)
+```
+
+#### 为headers增加默认字段
+
+- 实例化的时候使用default_headers参数
+
+##### 例子1
+
+- 每一次请求的headers都带上cookie
+
+```python
+spider = WauoSpider(default_headers={'Cookie': 'Your Cookies'})
+resp = spider.send('https://github.com/markadc')
+print(resp.request.headers)
 ```

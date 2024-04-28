@@ -92,9 +92,9 @@ class BaseSpider(SpiderTools):
 
 
 class WauoSpider(BaseSpider):
-    def __init__(self, cookie: str = None, session=False):
-        self.cookie = cookie or ''
+    def __init__(self, session=False, default_headers: dict = None):
         self.req = requests.Session() if session else requests
+        self.default_headers = default_headers or {}
 
     @retry
     def send(
@@ -111,8 +111,8 @@ class WauoSpider(BaseSpider):
         headers.setdefault('User-Agent', self.ua.random)
         if cookie:
             headers.setdefault('Cookie', cookie)
-        elif self.cookie:
-            headers.setdefault('Cookie', self.cookie)
+        for key, value in self.default_headers.items():
+            headers.setdefault(key, value)
 
         same = dict(headers=headers, proxies=proxies, timeout=timeout)
         if data is None and json is None:
@@ -122,7 +122,6 @@ class WauoSpider(BaseSpider):
 
         if codes and response.status_code not in codes:
             raise ResponseCodeError('{} not in {}'.format(response.status_code, codes))
-
         if checker and checker(response) is False:
             raise ResponseTextError('not ideal text')
 
