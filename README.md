@@ -4,7 +4,7 @@
 
 # Python解释器
 
-- python3.10+
+- python3
 
 # 如何使用？
 
