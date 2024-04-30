@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
+import os
 import random
 import string
 import time
@@ -18,13 +19,13 @@ class SpiderTools:
     """爬虫工具"""
 
     @staticmethod
-    def make_str(n=9):
+    def make_str(leng=9):
         """获取随机字符串，a-zA-Z0-9"""
-        s = "".join(random.sample(string.ascii_letters + string.digits, n))
+        s = "".join(random.sample(string.ascii_letters + string.digits, leng))
         return s
 
     @staticmethod
-    def make_md5(s: str):
+    def make_md5(s: str) -> str:
         """获取字符串的md5"""
         value = hashlib.md5(s.encode(encoding='UTF-8')).hexdigest()
         return value
@@ -46,6 +47,7 @@ class SpiderTools:
 
     @staticmethod
     def cookie_to_str(cookie: dict) -> str:
+        """Cookie转换为str类型"""
         cookie_str = ''
         for key, value in cookie.items():
             cookie_str += '{}={}; '.format(key, value)
@@ -53,12 +55,22 @@ class SpiderTools:
 
     @staticmethod
     def cookie_to_dict(cookie: str) -> dict:
+        """Cookie转换为dict类型"""
         cookie_dict = {kv.split('=')[0]: kv.split('=')[1] for kv in cookie.split('; ')}
         return cookie_dict
 
+    @staticmethod
+    def save_file(path: str, content, mode='w', encoding='UTF-8'):
+        """保存文件"""
+        p_dir = os.path.dirname(os.path.abspath(path))
+        if not os.path.exists(p_dir):
+            os.makedirs(p_dir)
+        with open(path, mode, encoding=None if mode == 'wb' else encoding) as f:
+            f.write(content)
+
 
 def retry(func):
-    """重试"""
+    """重试请求"""
 
     def _retry(*args, **kwargs):
         url = args[1]
@@ -72,7 +84,7 @@ def retry(func):
                     ERROR       {}
                     '''.format(url, e)
                 )
-        logger.critical('Failed  ==>  {}'.format(url))
+        logger.error('Failed  ==>  {}'.format(url))
 
     return _retry
 
@@ -130,3 +142,13 @@ class WauoSpider(BaseSpider):
     def get_local_ip(self) -> str:
         """获取本地IP"""
         return self.send('https://httpbin.org/ip').json()['origin']
+
+    def download_text(self, path: str, url: str, encoding='UTF-8'):
+        """从URL下载文本数据"""
+        text = self.send(url).text
+        self.save_file(path, text, encoding=encoding)
+
+    def download_bdata(self, path: str, url: str):
+        """从URL下载二进制数据"""
+        bdata = self.send(url).content
+        self.save_file(path, bdata, 'wb')
