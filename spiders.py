@@ -31,9 +31,10 @@ class SpiderTools:
         return value
 
     @staticmethod
-    def current_timestamp():
+    def current_timestamp(is_int=True):
         """当前时间戳"""
-        return int(time.time())
+        now = time.time()
+        return int(now) if is_int else now
 
     @staticmethod
     def current_time():
