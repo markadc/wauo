@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from wauo import WauoSpider
+from wauo import WauoSpider, Response
 
 s = WauoSpider(default_headers={'Cookie': 'Your Cookies'})
 url = 'https://www.baidu.com'
-resp = s.send(url)
+resp: Response = s.send(url)
+
 print(resp)
-print(resp.request.headers)
+print(resp.request.headers['Cookie'])
+
+title = resp.get_one('//title/text()')
+print(title)  # 输出：百度一下，你就知道

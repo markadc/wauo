@@ -13,6 +13,7 @@ from fake_useragent import UserAgent
 from loguru import logger
 
 from wauo.exceptions import ResponseCodeError, ResponseTextError
+from wauo.response import Response
 
 
 class SpiderTools:
@@ -105,7 +106,7 @@ class BaseSpider(SpiderTools):
 
 
 class WauoSpider(BaseSpider):
-    def __init__(self, session=False, default_headers: dict = None):
+    def __init__(self, session=True, default_headers: dict = None):
         self.req = requests.Session() if session else requests
         self.default_headers = default_headers or {}
 
@@ -138,7 +139,7 @@ class WauoSpider(BaseSpider):
         if checker and checker(response) is False:
             raise ResponseTextError('not ideal text')
 
-        return response
+        return Response(response)
 
     def get_local_ip(self) -> str:
         """获取本地IP"""
