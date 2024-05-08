@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import base64
 import hashlib
 import os
 import random
 import string
 import time
+import uuid
 from datetime import datetime
 from typing import Callable
 
@@ -18,6 +20,24 @@ from wauo.response import Response
 
 class SpiderTools:
     """爬虫工具"""
+
+    @staticmethod
+    def get_uuid():
+        """获取uuid"""
+        uuid4 = str(uuid.uuid4())
+        return uuid4
+
+    @staticmethod
+    def b64_encode(s: str):
+        """base64加密"""
+        encode_value = base64.b64encode(s.encode('utf-8')).decode('utf-8')
+        return encode_value
+
+    @staticmethod
+    def b64_decode(s: str):
+        """base64解密"""
+        decode_value = base64.b64decode(s).decode('utf-8')
+        return decode_value
 
     @staticmethod
     def make_str(leng=9):
@@ -116,7 +136,7 @@ class WauoSpider(BaseSpider):
             data: dict = None, json: dict = None,
             cookie: str = None, codes: list = None, checker: Callable = None,
             **kwargs
-    ):
+    ) -> Response:
         """
         发送请求，获取响应。默认为GET请求，如果传入了data或者json参数则为POST请求。
         """
