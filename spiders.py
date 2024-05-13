@@ -2,8 +2,10 @@
 
 import base64
 import hashlib
+import json
 import os
 import random
+import re
 import string
 import time
 import uuid
@@ -20,6 +22,12 @@ from wauo.response import Response
 
 class SpiderTools:
     """爬虫工具"""
+
+    @staticmethod
+    def jsonp2json(jsonp):
+        """jsonp转换为json"""
+        data: dict = json.loads(re.match(".*?({.*}).*", jsonp, re.S).group(1))
+        return data
 
     @staticmethod
     def get_uuid():
@@ -112,6 +120,8 @@ def retry(func):
 
 
 class BaseSpider(SpiderTools):
+    """爬虫基类"""
+
     ua = UserAgent()
 
     def get_headers(self) -> dict:
@@ -126,8 +136,10 @@ class BaseSpider(SpiderTools):
 
 
 class WauoSpider(BaseSpider):
+    """该爬虫默认保持会话状态"""
+
     def __init__(self, session=True, default_headers: dict = None):
-        self.req = requests.Session() if session else requests
+        self.client = requests.Session() if session else requests
         self.default_headers = default_headers or {}
 
     @retry
@@ -150,9 +162,9 @@ class WauoSpider(BaseSpider):
 
         same = dict(headers=headers, proxies=proxies, timeout=timeout)
         if data is None and json is None:
-            response = self.req.get(url, **same, **kwargs)
+            response = self.client.get(url, **same, **kwargs)
         else:
-            response = self.req.post(url, data=data, json=json, **same, **kwargs)
+            response = self.client.post(url, data=data, json=json, **same, **kwargs)
 
         if codes and response.status_code not in codes:
             raise ResponseCodeError('{} not in {}'.format(response.status_code, codes))
