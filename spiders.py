@@ -24,7 +24,7 @@ class SpiderTools:
     """爬虫工具"""
 
     @staticmethod
-    def jsonp2json(jsonp):
+    def jsonp2json(jsonp: str):
         """jsonp转换为json"""
         data: dict = json.loads(re.match(".*?({.*}).*", jsonp, re.S).group(1))
         return data
