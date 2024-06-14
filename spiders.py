@@ -177,12 +177,16 @@ class WauoSpider(BaseSpider):
         """获取本地IP"""
         return self.send('https://httpbin.org/ip').json()['origin']
 
-    def download_text(self, path: str, url: str, encoding='UTF-8'):
-        """从URL下载文本数据"""
-        text = self.send(url).text
-        self.save_file(path, text, encoding=encoding)
+    def update_default_headers(self, **kwargs):
+        """KEY重复，则覆盖原有KEY"""
+        for k, v in kwargs:
+            self.default_headers[k] = v
 
-    def download_bdata(self, path: str, url: str):
-        """从URL下载二进制数据"""
-        bdata = self.send(url).content
-        self.save_file(path, bdata, 'wb')
+    def download(self, url: str, path: str, mode=1, encoding='UTF-8'):
+        """mode=1或2（1下载文本，2下载二进制）"""
+        assert mode in [1, 2], '1：文本，2：二进制'
+        resp = self.send(url)
+        if mode == 1:
+            self.save_file(path, resp.text, encoding=encoding)
+        else:
+            self.save_file(path, resp.content, mode='wb')
