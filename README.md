@@ -5,6 +5,7 @@
 - 新增`get_uuid`、`base64加解密`静态方法
 - 删除`download_text`、`download_bdata`，合并为`download`
 - 新增`update_default_headers`方法
+- make_md5支持`字符串`、`二进制`参数，并且可以加盐
 
 # 项目说明
 

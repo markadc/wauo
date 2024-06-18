@@ -54,10 +54,15 @@ class SpiderTools:
         return s
 
     @staticmethod
-    def make_md5(s: str) -> str:
-        """获取字符串的md5"""
-        value = hashlib.md5(s.encode(encoding='UTF-8')).hexdigest()
-        return value
+    def make_md5(src: str | bytes, *args) -> str:
+        """获取md5"""
+        hasher = hashlib.md5()
+        data = src if isinstance(src, bytes) else src.encode('utf-8')
+        hasher.update(data)
+        for arg in args:
+            hasher.update(str(arg).encode('utf-8'))
+        md5_value = hasher.hexdigest()
+        return md5_value
 
     @staticmethod
     def current_timestamp(is_int=True):
@@ -178,7 +183,7 @@ class WauoSpider(BaseSpider):
         return self.send('https://httpbin.org/ip').json()['origin']
 
     def update_default_headers(self, **kwargs):
-        """KEY重复，则覆盖原有KEY"""
+        """更新默认headers，若key重复，则替换原有key"""
         for k, v in kwargs:
             self.default_headers[k] = v
 
