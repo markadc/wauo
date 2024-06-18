@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 class SpiderError(Exception):
     def __init__(self, msg):
         self.msg = msg

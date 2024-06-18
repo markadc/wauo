@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from parsel import Selector
 from requests import Response as BaseResponse
 

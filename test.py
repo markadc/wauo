@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from wauo import WauoSpider, Response
 
 s = WauoSpider(default_headers={'Cookie': 'Your Cookies'})
