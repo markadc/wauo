@@ -18,6 +18,12 @@ class PoolManager:
         self.count = 0
         self.max_count = limit or speed
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def todo(self, func, *args, **kwargs):
         """核心"""
         if self.count >= self.max_count:
