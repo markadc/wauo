@@ -150,11 +150,13 @@ class WauoSpider(BaseSpider):
             self, url: str, headers: dict = None, proxies: dict = None, timeout=3,
             data: dict = None, json: dict = None,
             cookie: str = None, codes: list = None, checker: Callable = None,
+            delay: int | float = 0,
             **kwargs
     ) -> Response:
         """
         发送请求，获取响应。默认为GET请求，如果传入了data或者json参数则为POST请求。
         """
+        time.sleep(delay)
         proxies = proxies or self.get_proxies()
         headers = headers or self.get_headers()
         headers.setdefault('User-Agent', self.ua.random)

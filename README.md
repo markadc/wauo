@@ -6,6 +6,7 @@
 - 删除`download_text`、`download_bdata`，合并为`download`
 - 新增`update_default_headers`方法
 - make_md5支持`字符串`、`二进制`参数，并且可以加盐
+- `send`方法加入`delay`参数，请求时可以设置延迟
 
 # 项目说明
 
