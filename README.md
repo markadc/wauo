@@ -5,7 +5,7 @@
 - 新增`get_uuid`、`base64加解密`静态方法
 - 删除`download_text`、`download_bdata`，合并为`download`
 - 新增`update_default_headers`方法
-- make_md5支持`字符串`、`二进制`参数，并且可以加盐
+- `make_md5`支持`字符串`、`二进制`参数，并且可以加盐
 - `send`方法加入`delay`参数，请求时可以设置延迟
 - 新增`tools`包、`spiders`包
 - `线程池管理者`加入上下文，可以使用`with`了
