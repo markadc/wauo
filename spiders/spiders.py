@@ -15,7 +15,7 @@ from fake_useragent import UserAgent
 from loguru import logger
 
 from wauo.exceptions import ResponseCodeError, ResponseTextError
-from wauo.response import Response
+from wauo.spiders.response import Response
 
 
 class SpiderTools:

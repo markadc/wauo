@@ -1,3 +1,2 @@
-from wauo.response import Response
-from wauo.spiders import WauoSpider
+from wauo.spiders import *
 from wauo.tools import *
