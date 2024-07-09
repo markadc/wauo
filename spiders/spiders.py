@@ -144,27 +144,37 @@ class WauoSpider(BaseSpider):
     def __init__(self, session=True, default_headers: dict = None):
         self.client = requests.Session() if session else requests
         self.default_headers = default_headers or {}
+        self.delay = 0
+        self.timeout = 5
+
+    def update_timeout(self, value: float | int):
+        self.timeout = value
+
+    def update_delay(self, value: float | int):
+        self.delay = value
 
     @retry
-    def send(
-            self, url: str, headers: dict = None, proxies: dict = None, timeout=3,
-            data: dict = None, json: dict = None,
-            cookie: str = None, codes: list = None, checker: Callable = None,
-            delay: int | float = 0,
-            **kwargs
-    ) -> Response:
+    def send(self, url: str, headers: dict = None, proxies: dict = None, timeout: float | int = None,
+             data: dict = None, json: dict = None,
+             cookie: str = None, codes: list = None, checker: Callable = None,
+             delay: int | float = None,
+             **kwargs) -> Response:
         """
         发送请求，获取响应。默认为GET请求，如果传入了data或者json参数则为POST请求。
         """
+        delay = delay or self.delay
         time.sleep(delay)
+
         proxies = proxies or self.get_proxies()
         headers = headers or self.get_headers()
+
         headers.setdefault('User-Agent', self.ua.random)
         if cookie:
             headers.setdefault('Cookie', cookie)
         for key, value in self.default_headers.items():
             headers.setdefault(key, value)
 
+        timeout = timeout or self.timeout
         same = dict(headers=headers, proxies=proxies, timeout=timeout)
         if data is None and json is None:
             response = self.client.get(url, **same, **kwargs)
