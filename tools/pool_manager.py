@@ -40,6 +40,10 @@ class PoolManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def close(self, wait=True, cancel_futures=False):
+        """释放资源"""
+        self.pool.shutdown(wait=wait, cancel_futures=cancel_futures)
+
     def todo(self, func, *args, **kwargs):
         """核心"""
         if self.count >= self.max_count:
@@ -47,8 +51,8 @@ class PoolManager:
             self.pool = ThreadPoolExecutor(max_workers=self.speed)
             self.count = 0
         future = self.pool.submit(func, *args, **kwargs)
-        future.add_done_callback(self.done)
         self.count += 1
+        future.add_done_callback(self.done)
 
     def done(self, future):
         """线程的回调函数"""
@@ -56,10 +60,6 @@ class PoolManager:
             future.result()
         except Exception as e:
             logger.error("线程异常 -> {}".format(e))
-
-    def close(self, wait=True, cancel_futures=False):
-        """释放资源"""
-        self.pool.shutdown(wait=wait, cancel_futures=cancel_futures)
 
 
 class PoolManagerPLUS(PoolManager):
@@ -73,6 +73,7 @@ class PoolManagerPLUS(PoolManager):
         """
         super().__init__(speed, limit)
         self.event = Event()
+        self.fs = []
 
     def todo(self, func, *args, **kwargs):
         """核心"""
@@ -82,13 +83,24 @@ class PoolManagerPLUS(PoolManager):
             self.event.wait()  # 开始阻塞
 
         future = self.pool.submit(func, *args, **kwargs)
+        self.fs.append(future)
         self.count += 1
         self.event.clear()  # 发出 开始阻塞 信号
         future.add_done_callback(self.done)
 
     def done(self, future):
         """线程的回调函数"""
+        if future in self.fs:
+            self.fs.remove(future)
+
         super().done(future)
+
         self.count -= 1
         if self.count < self.max_count:
             self.event.set()  # 有线程完成，发出 取消阻塞 信号
+
+    def running(self):
+        """是否还有任务在运行"""
+        for f in self.fs:
+            if f.running():
+                return True
