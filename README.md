@@ -19,7 +19,7 @@
 
 # Python解释器
 
-- python3
+- python3.10+
 
 # 如何使用？
 
