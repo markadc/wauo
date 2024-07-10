@@ -8,6 +8,7 @@ import string
 import time
 import uuid
 from datetime import datetime
+from functools import wraps
 from typing import Callable
 
 import requests
@@ -102,26 +103,6 @@ class SpiderTools:
             f.write(content)
 
 
-def retry(func):
-    """重试请求"""
-
-    def _retry(*args, **kwargs):
-        url = args[1]
-        for i in range(3):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                logger.error(
-                    '''
-                    URL         {}
-                    ERROR       {}
-                    '''.format(url, e)
-                )
-        logger.error('Failed  ==>  {}'.format(url))
-
-    return _retry
-
-
 class BaseSpider(SpiderTools):
     """爬虫基类"""
 
@@ -136,6 +117,27 @@ class BaseSpider(SpiderTools):
     def get_proxies() -> dict:
         """获取代理"""
         return {}
+
+
+def retry(func):
+    """重试请求"""
+
+    @wraps(func)
+    def inner(*args, **kwargs):
+        url = args[1]
+        for i in range(3):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logger.error(
+                    '''
+                    URL         {}
+                    ERROR       {}
+                    '''.format(url, e)
+                )
+        logger.critical('Failed  ==>  {}'.format(url))
+
+    return inner
 
 
 class WauoSpider(BaseSpider):
@@ -160,7 +162,25 @@ class WauoSpider(BaseSpider):
              delay: int | float = None,
              **kwargs) -> StrongResponse:
         """
-        发送请求，获取响应。默认为GET请求，如果传入了data或者json参数则为POST请求。
+        发送请求，获取响应。\n
+        默认为GET请求，如果传入了data或者json参数则为POST请求。\n
+        返回的响应对象可以直接使用Xpath、CSS。
+
+        Args:
+            url: 请求地址
+            headers: 请求头
+            proxies: 代理
+            timeout: 超时
+            data: 提交数据
+            json: 提交JSON数据
+            cookie: 为headers补充Cookie字段，如果headers已存在Cookie字段则不生效。
+            codes: 允许的响应码，返回的响应码不在其中则抛出异常。
+            checker: 一个函数，可以校验响应，函数返回Fasle则抛出异常。
+            delay: 延迟请求
+            **kwargs
+
+        Returns:
+            StrongResponse
         """
         delay = delay or self.delay
         time.sleep(delay)
