@@ -15,7 +15,7 @@ from fake_useragent import UserAgent
 from loguru import logger
 
 from wauo.exceptions import ResponseCodeError, ResponseTextError
-from wauo.spiders.response import Response
+from wauo.spiders.response import StrongResponse
 
 
 class SpiderTools:
@@ -158,7 +158,7 @@ class WauoSpider(BaseSpider):
              data: dict = None, json: dict = None,
              cookie: str = None, codes: list = None, checker: Callable = None,
              delay: int | float = None,
-             **kwargs) -> Response:
+             **kwargs) -> StrongResponse:
         """
         发送请求，获取响应。默认为GET请求，如果传入了data或者json参数则为POST请求。
         """
@@ -186,7 +186,7 @@ class WauoSpider(BaseSpider):
         if checker and checker(response) is False:
             raise ResponseTextError('not ideal text')
 
-        return Response(response)
+        return StrongResponse(response)
 
     def get_local_ip(self) -> str:
         """获取本地IP"""
