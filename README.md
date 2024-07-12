@@ -95,7 +95,12 @@ resp = spider.send('https://github.com/markadc', checker=is_ok)
 - 每一次请求的headers都带上cookie
 
 ```python
-spider = WauoSpider(default_headers={'Cookie': 'Your Cookies'})
-resp = spider.send('https://github.com/markadc')
-print(resp.request.headers)
+cookie = 'Your Cookies'
+
+spider = WauoSpider(default_headers={'Cookie': cookie})
+resp1 = spider.send('https://github.com/markadc')
+resp2 = spider.send('https://github.com/markadc/wauo')
+
+print(resp1.request.headers)
+print(resp2.request.headers)
 ```
