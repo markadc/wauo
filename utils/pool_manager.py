@@ -1,23 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
 from loguru import logger
-
-
-def get_results(fs: list, timeout=None):
-    """处理线程任务，有序获取（先返回的靠前）所有线程的返回值（异常的线程、假值除外）"""
-    results = []
-    try:
-        for v in as_completed(fs, timeout=timeout):
-            try:
-                result = v.result()
-                if result:
-                    results.append(result)
-            except Exception as e:
-                logger.error(e)
-    except Exception as e:
-        logger.error(e)
-    return results
 
 
 class PoolManager:
@@ -87,6 +71,10 @@ class PoolManagerPLUS(PoolManager):
         self.count += 1
         self.event.clear()  # 发出 开始阻塞 信号
         future.add_done_callback(self.done)
+
+    def todos(self, func, *some):
+        for args in zip(*some):
+            self.todo(func, *args)
 
     def done(self, future):
         """线程的回调函数"""
