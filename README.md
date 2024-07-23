@@ -25,13 +25,19 @@
 
 # 如何使用？
 
+## 开始导入
+
 ```python
 from wauo import WauoSpider
 
 spider = WauoSpider()
 ```
 
-## GET
+## 请求
+
+### GET
+
+- 默认是get请求
 
 ```python
 url = 'https://github.com/markadc'
@@ -39,43 +45,35 @@ resp = spider.send(url)
 print(resp.text)
 ```
 
-## POST
+### POST
 
-#### 使用data参数
-
-```python
-api = 'https://github.com/markadc'
-data = {
-    'key1': 'value1',
-    'key2': 'value2'
-}
-resp = spider.send(api, data=data)
-```
-
-#### 使用json参数
+- 使用了`data`或者`json`参数，则是post请求
 
 ```python
 api = 'https://github.com/markadc'
-json = {
+payload = {
     'key1': 'value1',
     'key2': 'value2'
 }
-resp = spider.send(api, json=json)
+resp = spider.send(api, data=payload)  # 使用data参数
+resp = spider.send(api, json=payload)  # 使用json参数
 ```
 
-## 限制响应
+## 响应
 
-#### 限制响应码
+### 校验响应
 
-- 如果响应码不在codes范围里则抛弃响应
+#### 1、限制响应码
+
+- 如果响应码不在codes范围里则抛弃响应（此时`send`返回`None`）
 
 ```python
 resp = spider.send('https://github.com/markadc', codes=[200, 301, 302])
 ```
 
-#### 限制响应内容
+#### 2、限制响应内容
 
-- 如果checker返回False则抛弃响应
+- 如果checker返回False则抛弃响应（此时`send`返回`None`）
 
 ```python
 def is_ok(response):
@@ -87,21 +85,24 @@ def is_ok(response):
 resp = spider.send('https://github.com/markadc', checker=is_ok)
 ```
 
-#### 为headers增加默认字段
+## 设置默认请求配置
 
-- 实例化的时候使用default_headers参数
+- 给headers设置Cookie
+- 给headers设置代理
+- 给headers设置认证信息
+- ...
 
-##### 例子1
+### 例子1
 
-- 每一次请求的headers都带上cookie
+- 每一次请求的headers都带上`cookie`
 
 ```python
-cookie = 'Your Cookies'
+from wauo import WauoSpider
 
+cookie = 'Your Cookies'
 spider = WauoSpider(default_headers={'Cookie': cookie})
 resp1 = spider.send('https://github.com/markadc')
 resp2 = spider.send('https://github.com/markadc/wauo')
-
 print(resp1.request.headers)
 print(resp2.request.headers)
 ```
