@@ -1,18 +1,18 @@
 # 更新历史
 
 - 新增`jsonp2json`静态方法
-- 爬虫`默认保持会话`状态
-- 新增`get_uuid`、`base64加解密`静态方法
+- 爬虫默认保持会话状态
+- 新增`get_uuid`、`base64`加解密的静态方法
 - 删除`download_text`、`download_bdata`，合并为`download`
 - 新增`update_default_headers`方法
-- `make_md5`支持`字符串`、`二进制`参数，并且可以加盐
+- `make_md5`支持字符串、二进制参数，并且可以加盐
 - `send`方法加入`delay`参数，请求时可以设置延迟
 - 新增`tools`包、`spiders`包
-- `线程池管理者`加入上下文，可以使用`with`了
-- 新增`get_results`方法，获取`所有fs`的返回值
-- 可以`提前`在send方法之前`自定义延迟、超时`
+- 线程池管理者加入上下文，可以使用`with`了
+- 新增`get_results`方法，获取所有`fs`的返回值
+- 可以提前在send方法之前自定义延迟、超时
 - 线程池管理者新增`running`方法，可以用于判断任务状态
-- `send`方法加入`详细注释`
+- `send`方法加入详细注释
 - 新增`todos`方法、tools改为utils
 
 # 项目说明
