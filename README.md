@@ -14,6 +14,8 @@
 - 线程池管理者新增`running`方法，可以用于判断任务状态
 - `send`方法加入详细注释
 - 新增`todos`方法、tools改为utils
+- `done`加入func_name参数，可以定位到具体是哪一个`线程函数`出现异常
+- `WaitPool`、`SpeedPool`
 
 # 项目说明
 
