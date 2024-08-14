@@ -94,7 +94,7 @@ class SpiderTools:
         return cookie_dict
 
     @staticmethod
-    def save_file(path: str, content, mode='w', encoding='UTF-8'):
+    def save_file(path: str, content: str | bytes, mode='w', encoding='UTF-8'):
         """保存文件"""
         p_dir = os.path.dirname(os.path.abspath(path))
         if not os.path.exists(p_dir):
