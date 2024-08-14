@@ -14,15 +14,15 @@ class StrongResponse(Response):
         return '<Response {}>'.format(self.status_code)
 
     def xpath(self, query: str):
-        sele = self.seler.xpath(query)
-        return sele
+        sel = self.seler.xpath(query)
+        return sel
 
     def css(self, query: str):
-        sele = self.seler.css(query)
-        return sele
+        sel = self.seler.css(query)
+        return sel
 
-    def get_one(self, query: str):
-        value = self.seler.xpath(query).get('').strip()
+    def get_one(self, query: str, default=''):
+        value = self.seler.xpath(query).get(default).strip()
         return value
 
     def get_all(self, query: str):
