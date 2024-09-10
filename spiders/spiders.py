@@ -94,8 +94,9 @@ class SpiderTools:
         return cookie_dict
 
     @staticmethod
-    def save_file(path: str, content: str | bytes, mode='w', encoding='UTF-8'):
+    def save_file(path: str, content: str | bytes, encoding='UTF-8'):
         """保存文件"""
+        mode = 'wb' if isinstance(content, bytes) else 'w'
         p_dir = os.path.dirname(os.path.abspath(path))
         if not os.path.exists(p_dir):
             os.makedirs(p_dir)
@@ -217,11 +218,8 @@ class WauoSpider(BaseSpider):
         for k, v in kwargs:
             self.default_headers[k] = v
 
-    def download(self, url: str, path: str, mode=1, encoding='UTF-8'):
-        """mode=1或2（1下载文本，2下载二进制）"""
-        assert mode in [1, 2], '1：文本，2：二进制'
+    def download(self, url: str, path: str, bin=True, encoding='UTF-8'):
+        """默认下载二进制"""
         resp = self.send(url)
-        if mode == 1:
-            self.save_file(path, resp.text, encoding=encoding)
-        else:
-            self.save_file(path, resp.content, mode='wb')
+        content = resp.content if bin else resp.text
+        self.save_file(path, content, encoding)
