@@ -47,13 +47,13 @@ class SpiderTools:
         return decode_value
 
     @staticmethod
-    def make_str(leng=9):
+    def rand_str(leng=9):
         """获取随机字符串，a-zA-Z0-9"""
         s = "".join(random.sample(string.ascii_letters + string.digits, leng))
         return s
 
     @staticmethod
-    def make_md5(src: str | bytes, *args) -> str:
+    def make_md5(src: str | bytes, *args: str) -> str:
         """获取md5"""
         hasher = hashlib.md5()
         data = src if isinstance(src, bytes) else src.encode('utf-8')
@@ -173,9 +173,9 @@ class WauoSpider(BaseSpider):
             timeout: 超时
             data: 提交数据
             json: 提交JSON数据
-            cookie: 为headers补充Cookie字段，如果headers已存在Cookie字段则不生效。
-            codes: 允许的响应码，返回的响应码不在其中则抛出异常。
-            checker: 一个函数，可以校验响应，函数返回Fasle则抛出异常。
+            cookie: 为headers补充Cookie字段，如果headers已存在Cookie字段则不生效
+            codes: 允许的响应码，返回的响应码不在其中则抛出异常
+            checker: 一个函数，可以校验响应，函数返回Fasle则抛出异常
             delay: 延迟请求
             **kwargs
 
