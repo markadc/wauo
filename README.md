@@ -16,6 +16,7 @@
 - 新增`todos`方法、tools改为utils
 - `done`加入func_name参数，可以定位到具体是哪一个`线程函数`出现异常
 - `WaitPool`、`SpeedPool`
+- 一些参数的变化（改名、补充注解）
 
 # 项目说明
 
