@@ -222,4 +222,4 @@ class WauoSpider(BaseSpider):
 
     def get_local_ip(self) -> str:
         """获取本地IP"""
-        return self.send('https://httpbin.org/ip').json()['origin']
+        return self.send("https://httpbin.org/ip").json()["origin"]
