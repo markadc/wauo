@@ -156,6 +156,11 @@ class WauoSpider(BaseSpider):
     def update_delay(self, value: float | int):
         self.delay = value
 
+    def update_default_headers(self, **kwargs):
+        """更新默认headers，若key重复，则替换原有key"""
+        for k, v in kwargs:
+            self.default_headers[k] = v
+
     @retry
     def send(self, url: str, headers: dict = None, proxies: dict = None, timeout: float | int = None,
              data: dict = None, json: dict = None,
@@ -209,17 +214,12 @@ class WauoSpider(BaseSpider):
 
         return StrongResponse(response)
 
-    def get_local_ip(self) -> str:
-        """获取本地IP"""
-        return self.send('https://httpbin.org/ip').json()['origin']
-
-    def update_default_headers(self, **kwargs):
-        """更新默认headers，若key重复，则替换原有key"""
-        for k, v in kwargs:
-            self.default_headers[k] = v
-
     def download(self, url: str, path: str, bin=True, encoding='UTF-8'):
         """默认下载二进制"""
         resp = self.send(url)
         content = resp.content if bin else resp.text
         self.save_file(path, content, encoding)
+
+    def get_local_ip(self) -> str:
+        """获取本地IP"""
+        return self.send('https://httpbin.org/ip').json()['origin']
