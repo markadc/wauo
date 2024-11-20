@@ -15,7 +15,7 @@ import requests
 from fake_useragent import UserAgent
 from loguru import logger
 
-from wauo.exceptions import ResponseCodeError, ResponseTextError
+from wauo.spiders.exceptions import ResponseCodeError, ResponseTextError
 from wauo.spiders.response import StrongResponse
 
 
@@ -183,7 +183,7 @@ class WauoSpider(BaseSpider):
             codes: 允许的响应码，返回的响应码不在其中则抛出异常
             checker: 一个函数，可以校验响应，函数返回Fasle则抛出异常
             delay: 延迟请求
-            **kwargs
+            **kwargs: 跟requests的参数保持一致
 
         Returns:
             StrongResponse
