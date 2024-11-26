@@ -1,6 +1,6 @@
 import threading
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor, Future, wait as _wait
 from functools import partial
 from typing import Callable
 
@@ -91,3 +91,7 @@ class SpeedPool(BasePool):
             if f.running():
                 return True
         return False
+
+    def block(self):
+        """阻塞，等待所有任务完成"""
+        _wait(self.running_futures)
