@@ -1,8 +1,8 @@
 from wauo import WauoSpider, StrongResponse
 
-s = WauoSpider(default_headers={'Cookie': 'Your Cookies'})
+session = WauoSpider(default_headers={'Cookie': 'Your Cookies'})
 url = 'https://www.baidu.com'
-resp: StrongResponse = s.send(url)
+resp: StrongResponse = session.send(url)
 
 print(resp)
 print(resp.request.headers['Cookie'])  # 输出：Your Cookies

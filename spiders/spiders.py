@@ -15,7 +15,7 @@ import requests
 from fake_useragent import UserAgent
 from loguru import logger
 
-from wauo.spiders.errors import ResponseCodeError, ResponseTextError
+from wauo.spiders.errors import ResponseCodeError, ResponseTextError, MaxRetryError
 from wauo.spiders.response import StrongResponse
 
 
@@ -161,7 +161,26 @@ class WauoSpider(BaseSpider):
         for k, v in kwargs:
             self.default_headers[k] = v
 
-    @retry
+    def go(self, url, max_retry=3, **kwargs):
+        times = 0
+        while True:
+            if times == max_retry + 1:
+                raise MaxRetryError("URL => {}".format(url))
+            times += 1
+            try:
+                resp = self.send(url, **kwargs)
+            except Exception as e:
+                logger.error(
+                    '''
+                    URL         {}
+                    ERROR       {}
+                    TIMES       {}
+                    '''.format(url, e, times)
+                )
+            else:
+                return StrongResponse(resp)
+
+    # @retry
     def send(self, url: str, headers: dict = None, proxies: dict = None, timeout: float | int = None,
              data: dict = None, json: dict = None,
              cookie: str = None, codes: list = None, checker: Callable = None,

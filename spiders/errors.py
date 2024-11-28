@@ -16,3 +16,7 @@ class ResponseTextError(SpiderError):
 
 class RequestMethodError(SpiderError):
     pass
+
+
+class MaxRetryError(SpiderError):
+    pass
