@@ -23,9 +23,13 @@ def type_check(func):
             if expected != inspect.Parameter.empty:
                 if default_value == inspect.Parameter.empty:
                     if not isinstance(value, expected):
-                        raise TypeError(f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}")
+                        raise TypeError(
+                            f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}"
+                        )
                 if value != default_value and not isinstance(value, expected):
-                    raise TypeError(f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}")
+                    raise TypeError(
+                        f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}"
+                    )
 
         return func(*args, **kwargs)
 
@@ -42,11 +46,19 @@ def forever(interval=60, errback=None):
                 try:
                     func(*args, **kwargs)
                 except Exception as e:
-                    logger.error('{}  ==>  {}出现异常了  ==>  {}秒后继续启动'.format(e, func.__name__, interval))
+                    logger.error(
+                        "{}  ==>  {}出现异常了  ==>  {}秒后继续启动".format(
+                            e, func.__name__, interval
+                        )
+                    )
                     if errback:
                         errback(e, *args, **kwargs)
                 else:
-                    logger.info('{}正常结束了 ==> {}秒后继续启动'.format(func.__name__, interval))
+                    logger.info(
+                        "{}正常结束了 ==> {}秒后继续启动".format(
+                            func.__name__, interval
+                        )
+                    )
                 finally:
                     time.sleep(interval)
 
@@ -63,7 +75,7 @@ def safe(func, when_failed=False):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logger.error('{}  ==>  {}'.format(e, func.__name__))
+            logger.error("{}  ==>  {}".format(e, func.__name__))
             return when_failed
 
     return inner
@@ -80,12 +92,12 @@ def retry(times=5, rest=2, is_raise=True, when_all_failed=False):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    logger.error('{}  ==>  {}'.format(e, func.__name__))
+                    logger.error("{}  ==>  {}".format(e, func.__name__))
                     time.sleep(rest)
                     err = e
             if is_raise:
                 raise err
-            logger.critical('重试全部失败  ==>  {}'.format(func.__name__))
+            logger.critical("重试全部失败  ==>  {}".format(func.__name__))
             return when_all_failed
 
         return inner
@@ -120,7 +132,7 @@ def timer(func):
         t1 = time.time()
         result = func(*args, **kwargs)
         t2 = time.time()
-        logger.info('{}耗时{:.4f}秒'.format(func.__name__, t2 - t1))
+        logger.info("{}耗时{:.4f}秒".format(func.__name__, t2 - t1))
         return result
 
     return inner

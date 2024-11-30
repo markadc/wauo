@@ -3,7 +3,7 @@ class SpiderError(Exception):
         self.msg = msg
 
     def __str__(self):
-        return '{}: {}'.format(self.__class__.__name__, self.msg)
+        return "{}: {}".format(self.__class__.__name__, self.msg)
 
 
 class ResponseCodeError(SpiderError):

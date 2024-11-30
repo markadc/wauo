@@ -11,7 +11,7 @@ class StrongResponse(Response):
         self.selector = Selector(text=response.text)
 
     def __str__(self):
-        return '<Response {}>'.format(self.status_code)
+        return "<Response {}>".format(self.status_code)
 
     def xpath(self, query: str):
         sel = self.selector.xpath(query)
@@ -21,7 +21,7 @@ class StrongResponse(Response):
         sel = self.selector.css(query)
         return sel
 
-    def get_one(self, query: str, default=''):
+    def get_one(self, query: str, default=""):
         value = self.selector.xpath(query).get(default).strip()
         return value
 

@@ -37,13 +37,13 @@ class SpiderTools:
     @staticmethod
     def b64_encode(s: str):
         """base64加密"""
-        encode_value = base64.b64encode(s.encode('utf-8')).decode('utf-8')
+        encode_value = base64.b64encode(s.encode("utf-8")).decode("utf-8")
         return encode_value
 
     @staticmethod
     def b64_decode(s: str):
         """base64解密"""
-        decode_value = base64.b64decode(s).decode('utf-8')
+        decode_value = base64.b64decode(s).decode("utf-8")
         return decode_value
 
     @staticmethod
@@ -56,10 +56,10 @@ class SpiderTools:
     def make_md5(src: str | bytes, *args: str) -> str:
         """获取md5"""
         hasher = hashlib.md5()
-        data = src if isinstance(src, bytes) else src.encode('utf-8')
+        data = src if isinstance(src, bytes) else src.encode("utf-8")
         hasher.update(data)
         for arg in args:
-            hasher.update(str(arg).encode('utf-8'))
+            hasher.update(str(arg).encode("utf-8"))
         md5_value = hasher.hexdigest()
         return md5_value
 
@@ -82,25 +82,25 @@ class SpiderTools:
     @staticmethod
     def cookie_to_str(cookie: dict) -> str:
         """Cookie转换为str类型"""
-        cookie_str = ''
+        cookie_str = ""
         for key, value in cookie.items():
-            cookie_str += '{}={}; '.format(key, value)
-        return cookie_str.rstrip('; ')
+            cookie_str += "{}={}; ".format(key, value)
+        return cookie_str.rstrip("; ")
 
     @staticmethod
     def cookie_to_dict(cookie: str) -> dict:
         """Cookie转换为dict类型"""
-        cookie_dict = {kv.split('=')[0]: kv.split('=')[1] for kv in cookie.split('; ')}
+        cookie_dict = {kv.split("=")[0]: kv.split("=")[1] for kv in cookie.split("; ")}
         return cookie_dict
 
     @staticmethod
-    def save_file(path: str, content: str | bytes, encoding='UTF-8'):
+    def save_file(path: str, content: str | bytes, encoding="UTF-8"):
         """保存文件"""
-        mode = 'wb' if isinstance(content, bytes) else 'w'
+        mode = "wb" if isinstance(content, bytes) else "w"
         p_dir = os.path.dirname(os.path.abspath(path))
         if not os.path.exists(p_dir):
             os.makedirs(p_dir)
-        with open(path, mode, encoding=None if mode == 'wb' else encoding) as f:
+        with open(path, mode, encoding=None if mode == "wb" else encoding) as f:
             f.write(content)
 
 
@@ -111,7 +111,7 @@ class BaseSpider(SpiderTools):
 
     def get_headers(self) -> dict:
         """获取headers"""
-        headers = {'User-Agent': self.ua.random}
+        headers = {"User-Agent": self.ua.random}
         return headers
 
     @staticmethod
@@ -131,12 +131,14 @@ def retry(func):
                 return func(*args, **kwargs)
             except Exception as e:
                 logger.error(
-                    '''
+                    """
                     URL         {}
                     ERROR       {}
-                    '''.format(url, e)
+                    """.format(
+                        url, e
+                    )
                 )
-        logger.critical('Failed  ==>  {}'.format(url))
+        logger.critical("Failed  ==>  {}".format(url))
 
     return inner
 
@@ -171,21 +173,32 @@ class WauoSpider(BaseSpider):
                 resp = self.send(url, **kwargs)
             except Exception as e:
                 logger.error(
-                    '''
+                    """
                     URL         {}
                     ERROR       {}
                     TIMES       {}
-                    '''.format(url, e, times)
+                    """.format(
+                        url, e, times
+                    )
                 )
             else:
                 return StrongResponse(resp)
 
     # @retry
-    def send(self, url: str, headers: dict = None, proxies: dict = None, timeout: float | int = None,
-             data: dict = None, json: dict = None,
-             cookie: str = None, codes: list = None, checker: Callable = None,
-             delay: int | float = None,
-             **kwargs) -> StrongResponse:
+    def send(
+        self,
+        url: str,
+        headers: dict = None,
+        proxies: dict = None,
+        timeout: float | int = None,
+        data: dict = None,
+        json: dict = None,
+        cookie: str = None,
+        codes: list = None,
+        checker: Callable = None,
+        delay: int | float = None,
+        **kwargs
+    ) -> StrongResponse:
         """
         发送请求，获取响应。\n
         默认为GET请求，如果传入了data或者json参数则为POST请求。\n
@@ -213,9 +226,9 @@ class WauoSpider(BaseSpider):
         proxies = proxies or self.get_proxies()
         headers = headers or self.get_headers()
 
-        headers.setdefault('User-Agent', self.ua.random)
+        headers.setdefault("User-Agent", self.ua.random)
         if cookie:
-            headers.setdefault('Cookie', cookie)
+            headers.setdefault("Cookie", cookie)
         for key, value in self.default_headers.items():
             headers.setdefault(key, value)
 
@@ -227,13 +240,13 @@ class WauoSpider(BaseSpider):
             response = self.client.post(url, data=data, json=json, **same, **kwargs)
 
         if codes and response.status_code not in codes:
-            raise ResponseCodeError('{} not in {}'.format(response.status_code, codes))
+            raise ResponseCodeError("{} not in {}".format(response.status_code, codes))
         if checker and checker(response) is False:
-            raise ResponseTextError('not ideal text')
+            raise ResponseTextError("not ideal text")
 
         return StrongResponse(response)
 
-    def download(self, url: str, path: str, bin=True, encoding='UTF-8'):
+    def download(self, url: str, path: str, bin=True, encoding="UTF-8"):
         """默认下载二进制"""
         resp = self.send(url)
         content = resp.content if bin else resp.text
