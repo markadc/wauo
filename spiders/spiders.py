@@ -184,20 +184,19 @@ class WauoSpider(BaseSpider):
             else:
                 return StrongResponse(resp)
 
-    # @retry
     def send(
-        self,
-        url: str,
-        headers: dict = None,
-        proxies: dict = None,
-        timeout: float | int = None,
-        data: dict = None,
-        json: dict = None,
-        cookie: str = None,
-        codes: list = None,
-        checker: Callable = None,
-        delay: int | float = None,
-        **kwargs
+            self,
+            url: str,
+            headers: dict = None,
+            proxies: dict = None,
+            timeout: float | int = None,
+            data: dict = None,
+            json: dict = None,
+            cookie: str = None,
+            codes: list = None,
+            checker: Callable = None,
+            delay: int | float = None,
+            **kwargs
     ) -> StrongResponse:
         """
         发送请求，获取响应。\n
