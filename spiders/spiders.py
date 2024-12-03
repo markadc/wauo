@@ -184,6 +184,34 @@ class WauoSpider(BaseSpider):
             else:
                 return StrongResponse(resp)
 
+    def goto(
+            self, url: str, headers: dict = None, params: dict = None,
+            data: dict = None, json: dict = None,
+            proxies: dict = None, timeout: int = 5,
+            retry=2,
+            delay=1, keep=True, **kwargs
+    ):
+        headers = headers or self.get_headers()
+        for i in range(retry + 1):
+            headers = headers if keep else self.get_headers()
+            same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout)
+            try:
+                if data is None and json is None:
+                    resp = self.client.get(url, **same, **kwargs)
+                else:
+                    resp = self.client.post(url, **same, data=data, json=json, **kwargs)
+                return StrongResponse(resp)
+            except Exception as e:
+                logger.error(
+                    """
+                    URL         {}
+                    ERROR       {}
+                    TIMES       {}
+                    """.format(url, e, i + 1)
+                )
+                time.sleep(delay)
+        raise MaxRetryError("URL => {}".format(url))
+
     def send(
             self,
             url: str,
@@ -231,8 +259,7 @@ class WauoSpider(BaseSpider):
         for key, value in self.default_headers.items():
             headers.setdefault(key, value)
 
-        timeout = timeout or self.timeout
-        same = dict(headers=headers, proxies=proxies, timeout=timeout)
+        same = dict(headers=headers, proxies=proxies, timeout=timeout or self.timeout)
         if data is None and json is None:
             response = self.client.get(url, **same, **kwargs)
         else:
