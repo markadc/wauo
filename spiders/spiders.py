@@ -178,7 +178,20 @@ class WauoSpider(BaseSpider):
             proxies: dict = None, timeout: int = 5,
             retry=2, delay=1, keep=True, codes: list = None, checker: Callable[[Response], bool] = None,
             **kwargs
-    ):
+    ) -> StrongResponse:
+        """
+        发送请求，获取响应
+        Args:
+            retry: 请求出现异常时，进行重试的次数
+            delay: 重试前先睡眠多少秒
+            keep: 所有的请求是否保持同一个headers
+            codes: 允许的响应码列表，不在其中则抛出ResponseCodeError异常
+            checker: 校验函数，可以校验响应内容，函数返回Fasle则抛出ResponseTextError异常
+            **kwargs:
+
+        Returns:
+            StrongResponse
+        """
         headers = headers or self.get_headers()
         for i in range(retry + 1):
             headers = headers if keep else self.get_headers()
