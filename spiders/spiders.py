@@ -16,7 +16,7 @@ from fake_useragent import UserAgent
 from loguru import logger
 
 from wauo.spiders.errors import ResponseCodeError, ResponseTextError, MaxRetryError
-from wauo.spiders.response import StrongResponse
+from wauo.spiders.response import StrongResponse, Response
 
 
 class SpiderTools:
@@ -163,33 +163,21 @@ class WauoSpider(BaseSpider):
         for k, v in kwargs:
             self.default_headers[k] = v
 
-    def go(self, url, max_retry=3, **kwargs):
-        times = 0
-        while True:
-            if times == max_retry + 1:
-                raise MaxRetryError("URL => {}".format(url))
-            times += 1
-            try:
-                resp = self.send(url, **kwargs)
-            except Exception as e:
-                logger.error(
-                    """
-                    URL         {}
-                    ERROR       {}
-                    TIMES       {}
-                    """.format(
-                        url, e, times
-                    )
-                )
-            else:
-                return StrongResponse(resp)
+    @staticmethod
+    def elog(url: str, e: Exception, times: int):
+        logger.error(
+            """
+            URL         {}
+            ERROR       {}
+            TIMES       {}
+            """.format(url, e, times)
+        )
 
     def goto(
-            self, url: str, headers: dict = None, params: dict = None,
-            data: dict = None, json: dict = None,
+            self, url: str, headers: dict = None, params: dict = None, data: dict = None, json: dict = None,
             proxies: dict = None, timeout: int = 5,
-            retry=2,
-            delay=1, keep=True, **kwargs
+            retry=2, delay=1, keep=True, codes: list = None, checker: Callable[[Response], bool] = None,
+            **kwargs
     ):
         headers = headers or self.get_headers()
         for i in range(retry + 1):
@@ -200,16 +188,15 @@ class WauoSpider(BaseSpider):
                     resp = self.client.get(url, **same, **kwargs)
                 else:
                     resp = self.client.post(url, **same, data=data, json=json, **kwargs)
-                return StrongResponse(resp)
             except Exception as e:
-                logger.error(
-                    """
-                    URL         {}
-                    ERROR       {}
-                    TIMES       {}
-                    """.format(url, e, i + 1)
-                )
+                self.elog(url, e, i + 1)
                 time.sleep(delay)
+            else:
+                if codes and resp.status_code not in codes:
+                    raise ResponseCodeError("{} not in {}".format(resp.status_code, codes))
+                if checker and checker(resp) is False:
+                    raise ResponseTextError("not ideal text")
+                return StrongResponse(resp)
         raise MaxRetryError("URL => {}".format(url))
 
     def send(
