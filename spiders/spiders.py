@@ -12,7 +12,6 @@ from functools import wraps
 from typing import Callable
 
 import requests
-from fake_useragent import UserAgent
 from loguru import logger
 
 from wauo.spiders.errors import ResponseCodeError, ResponseTextError, MaxRetryError
@@ -107,11 +106,18 @@ class SpiderTools:
 class BaseSpider(SpiderTools):
     """爬虫基类"""
 
-    ua = UserAgent()
+    def __init__(self, ua_way: str = "local"):
+        assert ua_way in ["api", "local"]
+        if ua_way == "api":
+            from fake_useragent import UserAgent
+            self.ua = UserAgent()
+        else:
+            from wauo.utils import get_ua
+            self.get_ua = get_ua
 
     def get_headers(self) -> dict:
         """获取headers"""
-        headers = {"User-Agent": self.ua.random}
+        headers = {"User-Agent": self.get_ua() if hasattr(self, "get_ua") else self.ua.random}
         return headers
 
     @staticmethod
@@ -146,7 +152,8 @@ def retry(func):
 class WauoSpider(BaseSpider):
     """该爬虫默认保持会话状态"""
 
-    def __init__(self, session=True, default_headers: dict = None):
+    def __init__(self, session=True, default_headers: dict = None, ua_way: str = "local"):
+        super().__init__(ua_way)
         self.client = requests.Session() if session else requests
         self.default_headers = default_headers or {}
         self.delay = 0

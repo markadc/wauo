@@ -1,3 +1,4 @@
+import random
 from concurrent.futures import as_completed
 from datetime import datetime
 
@@ -24,6 +25,7 @@ now = lambda: datetime.now().strftime("%Y:%m:%d %H:%M:%S")
 
 
 def cprint(content, color=None):
+    """带颜色的打印"""
     color_codes = {
         "black": "30",
         "red": "31",
@@ -44,3 +46,18 @@ def cprint(content, color=None):
     }
     color_code = color_codes.get(color, "37")
     print(f"\033[{color_code}m{now()} | {content}\033[0m")
+
+
+def get_ua():
+    a = random.randint(55, 62)
+    c = random.randint(0, 3200)
+    d = random.randint(0, 150)
+    os_type = [
+        '(Windows NT 6.1; WOW64)', '(Windows NT 10.0; WOW64)',
+        '(X11; Linux x86_64)',
+        '(Macintosh; Intel Mac OS X 10_12_6)'
+    ]
+    chrome_version = f'Chrome/{a}.0.{c}.{d}'
+    os_choice = random.choice(os_type)
+    ua = f"Mozilla/5.0 {os_choice} AppleWebKit/537.36 (KHTML, like Gecko) {chrome_version} Safari/537.36"
+    return ua
