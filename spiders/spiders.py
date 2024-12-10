@@ -8,7 +8,6 @@ import string
 import time
 import uuid
 from datetime import datetime
-from functools import wraps
 from typing import Callable
 
 import requests
@@ -16,6 +15,7 @@ from loguru import logger
 
 from wauo.spiders.errors import ResponseCodeError, ResponseTextError, MaxRetryError
 from wauo.spiders.response import StrongResponse, Response
+from wauo.utils import retry_request
 
 
 class SpiderTools:
@@ -106,64 +106,49 @@ class SpiderTools:
 class BaseSpider(SpiderTools):
     """爬虫基类"""
 
-    def __init__(self, ua_way: str = "local"):
+    def __init__(self, ua_way: str = "local", proxies: dict = None, delay=0, timeout=5):
         assert ua_way in ["api", "local"]
         if ua_way == "api":
             from fake_useragent import UserAgent
             self.ua = UserAgent()
         else:
             from wauo.utils import get_ua
-            self.get_ua = get_ua
+            self.gen_ua = get_ua
+        self.proxies = proxies or {}
+        self.delay = delay
+        self.timeout = timeout
 
     def get_headers(self) -> dict:
         """获取headers"""
-        headers = {"User-Agent": self.get_ua() if hasattr(self, "get_ua") else self.ua.random}
+        headers = {"User-Agent": self.get_ua()}
         return headers
 
-    @staticmethod
-    def get_proxies() -> dict:
+    def get_ua(self) -> str:
+        ua = self.gen_ua() if hasattr(self, "gen_ua") else self.ua.random
+        return ua
+
+    def get_proxies(self) -> dict:
         """获取代理"""
-        return {}
-
-
-def retry(func):
-    """重试请求"""
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        url = args[1]
-        for i in range(3):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                logger.error(
-                    """
-                    URL         {}
-                    ERROR       {}
-                    """.format(
-                        url, e
-                    )
-                )
-        logger.critical("Failed  ==>  {}".format(url))
-
-    return inner
-
-
-class WauoSpider(BaseSpider):
-    """该爬虫默认保持会话状态"""
-
-    def __init__(self, session=True, default_headers: dict = None, ua_way: str = "local"):
-        super().__init__(ua_way)
-        self.client = requests.Session() if session else requests
-        self.default_headers = default_headers or {}
-        self.delay = 0
-        self.timeout = 5
+        return self.proxies
 
     def update_timeout(self, value: float | int):
         self.timeout = value
 
     def update_delay(self, value: float | int):
         self.delay = value
+
+
+class WauoSpider(BaseSpider):
+    """该爬虫默认保持会话状态"""
+
+    def __init__(
+            self, session=True, default_headers: dict = None,
+            ua_way: str = "local", proxies: dict = None,
+            delay=0, timeout=5
+    ):
+        super().__init__(ua_way=ua_way, proxies=proxies, delay=delay, timeout=timeout)
+        self.client = requests.Session() if session else requests
+        self.default_headers = default_headers or {}
 
     def update_default_headers(self, **kwargs):
         """更新默认headers，若key重复，则替换原有key"""
@@ -181,7 +166,7 @@ class WauoSpider(BaseSpider):
         )
 
     def goto(
-            self, url: str, headers: dict = None, params: dict = None, data: dict = None, json: dict = None,
+            self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None,
             proxies: dict = None, timeout: int = 5,
             retry=2, delay=1, keep=True, codes: list = None, checker: Callable[[Response], bool] = None,
             **kwargs
@@ -194,15 +179,16 @@ class WauoSpider(BaseSpider):
             keep: 所有的请求是否保持同一个headers
             codes: 允许的响应码列表，不在其中则抛出ResponseCodeError异常
             checker: 校验函数，可以校验响应内容，函数返回Fasle则抛出ResponseTextError异常
-            **kwargs:
+            **kwargs: 跟requests保持一致
 
         Returns:
             StrongResponse
         """
-        headers = headers or self.get_headers()
+        _headers = headers or self.get_headers()
         for i in range(retry + 1):
-            headers = headers if keep else self.get_headers()
-            same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout)
+            _headers = _headers if keep else self.get_headers()
+            _proxies = proxies or self.get_proxies()
+            same = dict(headers=_headers, params=params, proxies=_proxies, timeout=timeout)
             try:
                 if data is None and json is None:
                     resp = self.client.get(url, **same, **kwargs)
@@ -219,6 +205,7 @@ class WauoSpider(BaseSpider):
                 return StrongResponse(resp)
         raise MaxRetryError("URL => {}".format(url))
 
+    @retry_request
     def send(
             self,
             url: str,
@@ -260,7 +247,7 @@ class WauoSpider(BaseSpider):
         proxies = proxies or self.get_proxies()
         headers = headers or self.get_headers()
 
-        headers.setdefault("User-Agent", self.ua.random)
+        headers.setdefault("User-Agent", self.get_ua())
         if cookie:
             headers.setdefault("Cookie", cookie)
         for key, value in self.default_headers.items():

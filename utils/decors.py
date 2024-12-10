@@ -147,3 +147,25 @@ def defer(func):
         return func(*args, **kwargs)
 
     return inner
+
+
+def retry_request(func):
+    """重试请求"""
+
+    @wraps(func)
+    def inner(*args, **kwargs):
+        url = args[1]
+        for i in range(3):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logger.error(
+                    """
+                    URL         {}
+                    ERROR       {}
+                    TYPE        {}
+                    """.format(url, e, type(e))
+                )
+        logger.critical("Failed  ==>  {}".format(url))
+
+    return inner
