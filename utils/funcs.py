@@ -1,8 +1,21 @@
+import ctypes
+import inspect
 import random
 from concurrent.futures import as_completed
 from datetime import datetime
+from threading import Thread
 
 from loguru import logger
+
+
+def kill_thread(thread: Thread):
+    """强制杀死线程"""
+    tid = thread.ident
+    exctype = SystemExit
+    tid = ctypes.c_long(tid)
+    if not inspect.isclass(exctype):
+        exctype = type(exctype)
+    ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
 
 
 def get_results(fs: list, timeout=None):
@@ -21,7 +34,7 @@ def get_results(fs: list, timeout=None):
     return results
 
 
-now = lambda: datetime.now().strftime("%Y:%m:%d %H:%M:%S")
+now = lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def cprint(content, color=None):
@@ -45,7 +58,7 @@ def cprint(content, color=None):
         "light_white": "97",
     }
     color_code = color_codes.get(color, "37")
-    print(f"\033[{color_code}m{now()} | {content}\033[0m")
+    print(f"\033[{color_code}m{now()}  {content}\033[0m")
 
 
 def get_ua():
