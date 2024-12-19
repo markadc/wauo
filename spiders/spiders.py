@@ -112,18 +112,19 @@ class BaseSpider(SpiderTools):
             from fake_useragent import UserAgent
             self.ua = UserAgent()
         else:
-            from wauo.utils import get_ua
-            self.gen_ua = get_ua
+            from wauo.utils import make_ua
+            self.gen_ua = make_ua
         self.proxies = proxies or {}
         self.delay = delay
         self.timeout = timeout
 
     def get_headers(self) -> dict:
-        """获取headers"""
+        """获取一个有随机ua的headers"""
         headers = {"User-Agent": self.get_ua()}
         return headers
 
     def get_ua(self) -> str:
+        """获取一个随机ua"""
         ua = self.gen_ua() if hasattr(self, "gen_ua") else self.ua.random
         return ua
 
@@ -147,7 +148,7 @@ class WauoSpider(BaseSpider):
             delay=0, timeout=5
     ):
         super().__init__(ua_way=ua_way, proxies=proxies, delay=delay, timeout=timeout)
-        self.client = requests.Session() if session else requests
+        self.session = requests.Session() if session else requests
         self.default_headers = default_headers or {}
 
     def update_default_headers(self, **kwargs):
@@ -191,9 +192,9 @@ class WauoSpider(BaseSpider):
             same = dict(headers=_headers, params=params, proxies=_proxies, timeout=timeout)
             try:
                 if data is None and json is None:
-                    resp = self.client.get(url, **same, **kwargs)
+                    resp = self.session.get(url, **same, **kwargs)
                 else:
-                    resp = self.client.post(url, **same, data=data, json=json, **kwargs)
+                    resp = self.session.post(url, **same, data=data, json=json, **kwargs)
             except Exception as e:
                 self.elog(url, e, i + 1)
                 time.sleep(delay)
@@ -255,9 +256,9 @@ class WauoSpider(BaseSpider):
 
         same = dict(headers=headers, proxies=proxies, timeout=timeout or self.timeout)
         if data is None and json is None:
-            response = self.client.get(url, **same, **kwargs)
+            response = self.session.get(url, **same, **kwargs)
         else:
-            response = self.client.post(url, data=data, json=json, **same, **kwargs)
+            response = self.session.post(url, data=data, json=json, **same, **kwargs)
 
         if codes and response.status_code not in codes:
             raise ResponseCodeError("{} not in {}".format(response.status_code, codes))
