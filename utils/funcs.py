@@ -8,6 +8,27 @@ from threading import Thread
 from loguru import logger
 
 
+def wlog(msg: str, show: bool):
+    if show:
+        logger.warning(msg)
+
+
+def cget(data: dict, *args, log=False, default=None):
+    """字典多层取值，不存在则返回<default>"""
+    temp = data
+    for i, a in enumerate(args):
+        if a not in temp:
+            wlog(f"KEY {a!r} miss", log)
+            return default
+        temp = temp.get(a)
+        if i == len(args) - 1:
+            return temp
+        if not isinstance(temp, dict):
+            wlog(f"KEY {a!r} VALUE {temp!r} not is dict", log)
+            return default
+    return temp
+
+
 def kill_thread(thread: Thread):
     """强制杀死线程"""
     tid = thread.ident

@@ -15,11 +15,12 @@
 - `send`方法加入详细注释
 - 新增`todos`方法、tools改为utils
 - `done`加入func_name参数，可以定位到具体是哪一个`线程函数`出现异常
-- `WaitPool`、`SpeedPool`
+- `PoolWait`、`PoolMan`
 - 一些参数的变化（改名、补充注解）
 - 加入了一些装饰器函数
 - 补充`send`方法中`**kwargs`的说明
 - 新增`block`方法，可以进行阻塞
+- utils包新增`cget`方法，字典多层取值不存在则返回<default>
 
 # 项目说明
 
