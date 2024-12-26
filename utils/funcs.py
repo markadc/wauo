@@ -78,8 +78,11 @@ def cprint(content, color=None):
         "light_cyan": "96",
         "light_white": "97",
     }
-    color_code = color_codes.get(color, "30")
-    print(f"\033[{color_code}m{now()}  {content}\033[0m")
+    color_code = color_codes.get(color)
+    if color_code:
+        print(f"\033[{color_code}m{now()}  {content}\033[0m")
+    else:
+        print(f"{now()}  {content}")
 
 
 def make_ua():
