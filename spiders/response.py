@@ -25,13 +25,13 @@ class StrongResponse(Response):
         sel = self.selector.css(query)
         return sel
 
-    def get_one(self, query: str, default=""):
-        value = self.selector.xpath(query).get(default).strip()
-        return value
+    def get_one(self, query: str, default=None, strip=True):
+        v = self.selector.xpath(query).get(default)
+        return v.strip() if strip and isinstance(v, str) else v
 
-    def get_all(self, query: str):
-        value = [v.strip() for v in self.selector.xpath(query).getall()]
-        return value
+    def get_all(self, query: str, strip=True):
+        vs = [v.strip() if strip else v for v in self.selector.xpath(query).getall()]
+        return vs
 
     def raise_for_status(self, codes: list = None):
         codes = codes or [200]
