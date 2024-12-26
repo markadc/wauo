@@ -39,7 +39,7 @@ def kill_thread(thread: Thread):
     ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
 
 
-def get_results(fs: list, timeout=None):
+def get_results(fs: list, timeout: int | float = None):
     """处理线程任务，有序获取（先返回的靠前）所有线程的返回值（异常的线程、假值除外）"""
     results = []
     try:
@@ -82,7 +82,8 @@ def cprint(content, color=None):
     print(f"\033[{color_code}m{now()}  {content}\033[0m")
 
 
-def get_ua():
+def make_ua():
+    """随机User-Agent"""
     a = random.randint(55, 62)
     c = random.randint(0, 3200)
     d = random.randint(0, 150)
