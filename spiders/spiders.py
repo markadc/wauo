@@ -8,7 +8,6 @@ import string
 import time
 import uuid
 from datetime import datetime
-from typing import Callable
 
 import requests
 from loguru import logger
@@ -218,7 +217,7 @@ class WauoSpider(BaseSpider):
             raise MaxRetryError("URL => {}".format(url))
 
     @retry_request
-    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, codes: list = None, checker: Callable = None, delay: int | float = None, **kwargs) -> StrongResponse:
+    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, delay: int | float = None, **kwargs) -> StrongResponse:
         """
         发送请求，获取响应。
         默认为GET请求，如果传入了data或者json参数则为POST请求。
