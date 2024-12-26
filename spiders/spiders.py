@@ -146,11 +146,7 @@ class BaseSpider(SpiderTools):
 class WauoSpider(BaseSpider):
     """该爬虫默认保持会话状态"""
 
-    def __init__(
-            self, session=True, default_headers: dict = None,
-            ua_way: str = "local", proxies: dict = None,
-            delay=0, timeout=5
-    ):
+    def __init__(self, session=True, default_headers: dict = None, ua_way="local", proxies: dict = None, delay=0, timeout=5):
         super().__init__(ua_way=ua_way, proxies=proxies, delay=delay, timeout=timeout)
         self.client = requests.Session() if session else requests
         self.default_headers = default_headers or {}
