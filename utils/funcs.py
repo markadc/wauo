@@ -14,7 +14,7 @@ def wlog(msg: str, show: bool):
 
 
 def cget(data: dict, *args, log=False, default=None):
-    """字典多层取值，不存在则返回<default>"""
+    """字典多层取值，KEY不存在则返回<default>"""
     temp = data
     for i, a in enumerate(args):
         if a not in temp:

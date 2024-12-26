@@ -21,7 +21,7 @@
 - 补充`send`方法中`**kwargs`的说明
 - 新增`block`方法，可以进行阻塞
 - 一些优化
-- utils包新增`cget`方法，字典多层取值不存在则返回<default>
+- utils包新增`cget`方法，字典多层取值，KEY不存在则返回<default>
 
 # 项目说明
 
