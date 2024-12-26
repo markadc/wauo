@@ -23,6 +23,7 @@
 - 一些优化
 - utils包新增`cget`方法，字典多层取值，KEY不存在则返回<default>
 - cprint参数有误则默认不加入颜色打印
+- 一些优化，新增raise_for_status、raise_for_text、do方法、函数文档模板修改等
 
 # 项目说明
 
