@@ -200,10 +200,9 @@ class WauoSpider(BaseSpider):
         -------
         StrongResponse，可以使用Xpath、CSS
         """
-        keep = True if headers else False
         headers2 = headers or self.get_headers()
         for i in range(retry + 1):
-            headers2, proxies2 = headers2 if keep else self.get_headers(), proxies or self.get_proxies()
+            headers2, proxies2 = headers2 if keep or headers else self.get_headers(), proxies or self.get_proxies()
             self.add_field(headers2)
             same = dict(headers=headers2, params=params, proxies=proxies2, timeout=timeout, **kwargs)
             try:
