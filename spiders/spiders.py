@@ -13,7 +13,7 @@ from typing import Callable
 import requests
 from loguru import logger
 
-from wauo.spiders.errors import ResponseCodeError, ResponseTextError, MaxRetryError
+from wauo.spiders.errors import MaxRetryError
 from wauo.spiders.response import StrongResponse
 from wauo.utils import retry_request
 
@@ -218,7 +218,7 @@ class WauoSpider(BaseSpider):
             raise MaxRetryError("URL => {}".format(url))
 
     @retry_request
-    def send(self, url: str, headers: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, codes: list = None, checker: Callable = None, delay: int | float = None, **kwargs) -> StrongResponse:
+    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, codes: list = None, checker: Callable = None, delay: int | float = None, **kwargs) -> StrongResponse:
         """
         发送请求，获取响应。
         默认为GET请求，如果传入了data或者json参数则为POST请求。
@@ -252,17 +252,8 @@ class WauoSpider(BaseSpider):
         for key, value in self.default_headers.items():
             headers.setdefault(key, value)
 
-        same = dict(headers=headers, proxies=proxies, timeout=timeout or self.timeout)
-        if data is None and json is None:
-            response = self.client.get(url, **same, **kwargs)
-        else:
-            response = self.client.post(url, data=data, json=json, **same, **kwargs)
-
-        if codes and response.status_code not in codes:
-            raise ResponseCodeError("{} not in {}".format(response.status_code, codes))
-        if checker and checker(response) is False:
-            raise ResponseTextError("not ideal text")
-
+        same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout or self.timeout, **kwargs)
+        response = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
         return StrongResponse(response)
 
     def download(self, url: str, path: str, bin=True, encoding="UTF-8"):

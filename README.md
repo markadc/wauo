@@ -75,31 +75,29 @@ resp = spider.send(api, json=payload)  # 使用json参数
 
 #### 1、限制响应码
 
-- 如果响应码不在codes范围里则抛弃响应（此时`send`返回`None`）
+- 如果响应码不在codes范围里则引发异常
 
 ```python
-resp = spider.send('https://github.com/markadc', codes=[200, 301, 302])
+resp = spider.send('https://github.com/markadc')
+resp.raise_for_status(codes=[301, 302])
 ```
 
 #### 2、限制响应内容
 
-- 如果checker返回False则抛弃响应（此时`send`返回`None`）
+- 如果is_ok返回False则引发异常
 
 ```python
-def is_ok(response):
-    html = response.text
-    if html.find('验证码') != -1:
-        return False
+def is_ok(html: str):
+    return html.find('验证') == -1
 
 
-resp = spider.send('https://github.com/markadc', checker=is_ok)
+resp = spider.send('https://wenku.baidu.com/wkvcode.html')
+resp.raise_for_text(validate=is_ok)
 ```
 
 ## 设置默认请求配置
 
 - 给headers设置Cookie
-- 给headers设置代理
-- 给headers设置认证信息
 - ...
 
 ### 例子1
