@@ -14,7 +14,7 @@ import requests
 from loguru import logger
 
 from wauo.spiders.errors import ResponseCodeError, ResponseTextError, MaxRetryError
-from wauo.spiders.response import StrongResponse, Response
+from wauo.spiders.response import StrongResponse
 from wauo.utils import retry_request
 
 
@@ -117,6 +117,11 @@ class BaseSpider(SpiderTools):
         self.proxies = proxies or {}
         self.delay = delay
         self.timeout = timeout
+        self._raise_request_error = True  # True，请求异常则抛出异常；False，请求异常则响应返回None
+
+    def allow_request_failed(self):
+        """允许请求失败，此时响应为None"""
+        self._raise_request_error = False
 
     def get_headers(self) -> dict:
         """获取一个有随机ua的headers"""
@@ -148,13 +153,18 @@ class WauoSpider(BaseSpider):
             delay=0, timeout=5
     ):
         super().__init__(ua_way=ua_way, proxies=proxies, delay=delay, timeout=timeout)
-        self.session = requests.Session() if session else requests
+        self.client = requests.Session() if session else requests
         self.default_headers = default_headers or {}
 
     def update_default_headers(self, **kwargs):
         """更新默认headers，若key重复，则替换原有key"""
         for k, v in kwargs:
             self.default_headers[k] = v
+
+    def add_field(self, headers: dict):
+        """为headers补充默认default_headers的字段"""
+        for k, v in self.default_headers.items():
+            headers.setdefault(k, v)
 
     @staticmethod
     def elog(url: str, e: Exception, times: int):
@@ -166,81 +176,69 @@ class WauoSpider(BaseSpider):
             """.format(url, e, times)
         )
 
-    def goto(
-            self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None,
-            proxies: dict = None, timeout: int = 5,
-            retry=2, delay=1, keep=True, codes: list = None, checker: Callable[[Response], bool] = None,
-            **kwargs
-    ) -> StrongResponse:
-        """
-        发送请求，获取响应
-        Args:
-            retry: 请求出现异常时，进行重试的次数
-            delay: 重试前先睡眠多少秒
-            keep: 所有的请求是否保持同一个headers
-            codes: 允许的响应码列表，不在其中则抛出ResponseCodeError异常
-            checker: 校验函数，可以校验响应内容，函数返回Fasle则抛出ResponseTextError异常
-            **kwargs: 跟requests保持一致
+    def do(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int | float = 5, **kwargs) -> StrongResponse:
+        """获取URL响应"""
+        headers, proxies = headers or self.get_headers(), proxies or self.get_proxies()
+        self.add_field(headers)
+        same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs)
+        res = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
+        return StrongResponse(res)
 
-        Returns:
-            StrongResponse
+    def goto(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int = 5, retry=2, delay=1, keep=True, **kwargs) -> StrongResponse:
         """
-        _headers = headers or self.get_headers()
+        获取响应，自带重试
+
+        Parameters
+        ----------
+        retry   请求出现异常时，进行重试的次数
+        delay   重试前先睡眠多少秒
+        keep    所有的请求是否保持同一个headers，仅在headers为None时生效
+        codes
+        checker
+        kwargs  跟requests的参数保持一致
+
+        Returns
+        -------
+        StrongResponse，可以使用Xpath、CSS
+        """
+        keep = True if headers else False
+        headers2 = headers or self.get_headers()
         for i in range(retry + 1):
-            _headers = _headers if keep else self.get_headers()
-            _proxies = proxies or self.get_proxies()
-            same = dict(headers=_headers, params=params, proxies=_proxies, timeout=timeout)
+            headers2, proxies2 = headers2 if keep else self.get_headers(), proxies or self.get_proxies()
+            self.add_field(headers2)
+            same = dict(headers=headers2, params=params, proxies=proxies2, timeout=timeout, **kwargs)
             try:
-                if data is None and json is None:
-                    resp = self.session.get(url, **same, **kwargs)
-                else:
-                    resp = self.session.post(url, **same, data=data, json=json, **kwargs)
+                resp = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
+                return StrongResponse(resp)
             except Exception as e:
                 self.elog(url, e, i + 1)
                 time.sleep(delay)
-            else:
-                if codes and resp.status_code not in codes:
-                    raise ResponseCodeError("{} not in {}".format(resp.status_code, codes))
-                if checker and checker(resp) is False:
-                    raise ResponseTextError("not ideal text")
-                return StrongResponse(resp)
-        raise MaxRetryError("URL => {}".format(url))
+
+        if self._raise_request_error:
+            raise MaxRetryError("URL => {}".format(url))
 
     @retry_request
-    def send(
-            self,
-            url: str,
-            headers: dict = None,
-            proxies: dict = None,
-            timeout: float | int = None,
-            data: dict | str = None,
-            json: dict = None,
-            cookie: str = None,
-            codes: list = None,
-            checker: Callable = None,
-            delay: int | float = None,
-            **kwargs
-    ) -> StrongResponse:
+    def send(self, url: str, headers: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, codes: list = None, checker: Callable = None, delay: int | float = None, **kwargs) -> StrongResponse:
         """
-        发送请求，获取响应。\n
-        默认为GET请求，如果传入了data或者json参数则为POST请求。\n
+        发送请求，获取响应。
+        默认为GET请求，如果传入了data或者json参数则为POST请求。
         返回的响应对象可以直接使用Xpath、CSS。
 
-        Args:
-            url: 请求地址
-            headers: 请求头
-            proxies: 代理
-            timeout: 超时
-            data: 提交数据
-            json: 提交JSON数据
-            cookie: 为headers补充Cookie字段，如果headers已存在Cookie字段则不生效
-            codes: 允许的响应码，返回的响应码不在其中则抛出异常
-            checker: 一个函数，可以校验响应，函数返回Fasle则抛出异常
-            delay: 延迟请求
-            **kwargs: 跟requests的参数保持一致
+        Parameters
+        ----------
+        url     请求地址
+        headers 请求头
+        proxies 代理
+        timeout 超时
+        data    请求体form-data
+        json    请求体json
+        cookie  为headers补充Cookie字段，如果headers已存在Cookie字段则不生效
+        delay   延迟请求的秒数
+        kwargs  跟requests的参数保持一致
 
-        Returns:
-            StrongResponse
+        Returns
+        -------
+        StrongResponse，可以使用Xpath、CSS
         """
         delay = delay or self.delay
         time.sleep(delay)
@@ -256,9 +254,9 @@ class WauoSpider(BaseSpider):
 
         same = dict(headers=headers, proxies=proxies, timeout=timeout or self.timeout)
         if data is None and json is None:
-            response = self.session.get(url, **same, **kwargs)
+            response = self.client.get(url, **same, **kwargs)
         else:
-            response = self.session.post(url, data=data, json=json, **same, **kwargs)
+            response = self.client.post(url, data=data, json=json, **same, **kwargs)
 
         if codes and response.status_code not in codes:
             raise ResponseCodeError("{} not in {}".format(response.status_code, codes))
