@@ -1,3 +1,9 @@
+# 安装
+
+```bash
+pip install wauo -U
+```
+
 # 更新历史
 
 - 新增`jsonp2json`静态方法
@@ -27,7 +33,7 @@
 
 # 项目说明
 
-- 基于requests封装的一个爬虫类
+- 基于requests封装的一个爬虫
 
 # Python解释器
 
