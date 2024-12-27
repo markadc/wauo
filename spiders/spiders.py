@@ -214,9 +214,9 @@ class WauoSpider(BaseSpider):
     @retry_request
     def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, delay: int | float = None, **kwargs) -> StrongResponse:
         """
-        发送请求，获取响应。
-        默认为GET请求，如果传入了data或者json参数则为POST请求。
-        返回的响应对象可以直接使用Xpath、CSS。
+        发送请求，获取响应
+        默认为GET请求，如果传入了data或者json参数则为POST请求
+        返回的响应对象可以直接使用Xpath、CSS
 
         Parameters
         ----------
