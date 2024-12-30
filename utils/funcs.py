@@ -8,6 +8,11 @@ from threading import Thread
 from loguru import logger
 
 
+def timef(ts: int | float) -> str:
+    """时间戳（秒）转时间"""
+    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def wlog(msg: str, show: bool):
     if show:
         logger.warning(msg)
