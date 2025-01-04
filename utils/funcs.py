@@ -1,11 +1,46 @@
 import ctypes
 import inspect
 import random
+import time
 from concurrent.futures import as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Thread
 
 from loguru import logger
+
+
+def pv(*args, newline=True, sep="    "):
+    """打印变量的名称、值"""
+    frame = inspect.currentframe().f_back
+    vars = frame.f_locals
+    s = ""
+    for name, value in vars.items():
+        if value in args:
+            tail = "\n" if newline else sep
+            part = f"{name}: {value!r}{tail}"
+            s += part
+    print(s)
+
+
+def ts2time(ts: float) -> str:
+    """时间戳转时间"""
+    date_fmt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+    return date_fmt
+
+
+def time2ts(date_fmt: str) -> int:
+    """时间转时间戳"""
+    ts = time.mktime(time.strptime(date_fmt, "%Y-%m-%d %H:%M:%S"))
+    return int(ts)
+
+
+def today_anytime_ts(hour: int, minute: int, second=0) -> float:
+    """获取今天任意时刻的时间戳"""
+    now = datetime.now()
+    today_0 = now - timedelta(hours=now.hour, minutes=now.minute, seconds=now.second)
+    today_anytime = today_0 + timedelta(hours=hour, minutes=minute, seconds=second)
+    ts = today_anytime.timestamp()
+    return ts
 
 
 def timef(ts: int | float) -> str:
