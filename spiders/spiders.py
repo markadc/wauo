@@ -11,9 +11,8 @@ from datetime import datetime
 
 import requests
 from loguru import logger
-
 from wauo.spiders.errors import MaxRetryError
-from wauo.spiders.response import StrongResponse
+from wauo.spiders.response import SelectorResponse
 from wauo.utils import retry_request
 
 
@@ -171,15 +170,15 @@ class WauoSpider(BaseSpider):
             """.format(url, e, times)
         )
 
-    def do(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int | float = 5, **kwargs) -> StrongResponse:
-        """获取URL响应"""
+    def do(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int | float = 5, **kwargs) -> SelectorResponse:
+        """默认为GET请求，传递了data或者json参数则为POST请求"""
         headers, proxies = headers or self.get_headers(), proxies or self.get_proxies()
         self.add_field(headers)
         same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs)
         res = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
-        return StrongResponse(res)
+        return SelectorResponse(res)
 
-    def goto(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int = 5, retry=2, delay=1, keep=True, **kwargs) -> StrongResponse:
+    def goto(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int = 5, retry=2, delay=1, keep=True, **kwargs) -> SelectorResponse:
         """
         获取响应，自带重试
 
@@ -188,13 +187,11 @@ class WauoSpider(BaseSpider):
         retry   请求出现异常时，进行重试的次数
         delay   重试前先睡眠多少秒
         keep    所有的请求是否保持同一个headers，仅在headers为None时生效
-        codes
-        checker
         kwargs  跟requests的参数保持一致
 
         Returns
         -------
-        StrongResponse，可以使用Xpath、CSS
+        SelectorResponse，可以使用Xpath、CSS
         """
         headers2 = headers or self.get_headers()
         for i in range(retry + 1):
@@ -203,7 +200,7 @@ class WauoSpider(BaseSpider):
             same = dict(headers=headers2, params=params, proxies=proxies, timeout=timeout, **kwargs)
             try:
                 resp = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
-                return StrongResponse(resp)
+                return SelectorResponse(resp)
             except Exception as e:
                 self.elog(url, e, i + 1)
                 time.sleep(delay)
@@ -212,7 +209,7 @@ class WauoSpider(BaseSpider):
             raise MaxRetryError("URL => {}".format(url))
 
     @retry_request
-    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, delay: int | float = None, **kwargs) -> StrongResponse:
+    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, delay: int | float = None, **kwargs) -> SelectorResponse:
         """
         发送请求，获取响应
         默认为GET请求，如果传入了data或者json参数则为POST请求
@@ -232,7 +229,7 @@ class WauoSpider(BaseSpider):
 
         Returns
         -------
-        StrongResponse，可以使用Xpath、CSS
+        SelectorResponse，可以使用Xpath、CSS
         """
         delay = delay or self.delay
         time.sleep(delay)
@@ -248,7 +245,7 @@ class WauoSpider(BaseSpider):
 
         same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout or self.timeout, **kwargs)
         response = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
-        return StrongResponse(response)
+        return SelectorResponse(response)
 
     def download(self, url: str, path: str, bin=True, encoding="UTF-8"):
         """默认下载二进制"""

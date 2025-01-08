@@ -9,7 +9,7 @@ from threading import Thread
 from loguru import logger
 
 
-def pv(*args, newline=True, sep="    "):
+def pv(*args, newline=True, sep="    ", rstrip=True):
     """打印变量的名称、值"""
     frame = inspect.currentframe().f_back
     vars = frame.f_locals
@@ -19,7 +19,7 @@ def pv(*args, newline=True, sep="    "):
             tail = "\n" if newline else sep
             part = f"{name}: {value!r}{tail}"
             s += part
-    print(s)
+    print(s.rstrip() if rstrip else s)
 
 
 def ts2time(ts: float) -> str:

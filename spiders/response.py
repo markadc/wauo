@@ -2,11 +2,10 @@ from typing import Callable
 
 from parsel import Selector
 from requests import Response
-
 from wauo.spiders.errors import ResponseCodeError, ResponseTextError
 
 
-class StrongResponse(Response):
+class SelectorResponse(Response):
     """可以使用Xpath、CSS"""
 
     def __init__(self, response: Response):
