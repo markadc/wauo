@@ -26,3 +26,6 @@ class Loger:
 
     def critical(self, msg, *args, **kwargs):
         self.__logger.critical(msg, *args, **kwargs)
+
+    def success(self, msg, *args, **kwargs):
+        self.__logger.info(msg, *args, **kwargs)
