@@ -8,12 +8,12 @@ import string
 import time
 import uuid
 from datetime import datetime
+from functools import wraps
 
 import requests
 from loguru import logger
 from wauo.spiders.errors import MaxRetryError
 from wauo.spiders.response import SelectorResponse
-from wauo.utils import retry_request
 
 
 class SpiderTools:
@@ -141,6 +141,27 @@ class BaseSpider(SpiderTools):
     def update_delay(self, value: float | int):
         self.delay = value
 
+def auto_retry(func):
+    """重试请求"""
+
+    @wraps(func)
+    def inner(*args, **kwargs):
+        url = args[1]
+        for i in range(3):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logger.error(
+                    """
+                    URL         {}
+                    ERROR       {}
+                    TYPE        {}
+                    """.format(url, e, type(e))
+                )
+        logger.critical("Failed | {}".format(url))
+
+    return inner
+
 
 class WauoSpider(BaseSpider):
     """该爬虫默认保持会话状态"""
@@ -208,7 +229,7 @@ class WauoSpider(BaseSpider):
         if self._raise_request_error:
             raise MaxRetryError("URL => {}".format(url))
 
-    @retry_request
+    @auto_retry
     def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, delay: int | float = None, **kwargs) -> SelectorResponse:
         """
         发送请求，获取响应

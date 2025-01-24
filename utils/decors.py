@@ -1,9 +1,33 @@
 import inspect
 import random
+import threading
 import time
 from functools import wraps
 
 from loguru import logger
+
+
+def monitor(interval: int, tip: str):
+    """监视器（守护线程）"""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def task():
+                while True:
+                    try:
+                        func(*args, **kwargs)
+                    except Exception as e:
+                        logger.critical("{} | {}".format(tip, e))
+                    time.sleep(interval)
+
+            t = threading.Thread(target=task)
+            t.daemon = True
+            t.start()
+
+        return wrapper
+
+    return decorator
 
 
 def type_check(func):
@@ -46,19 +70,11 @@ def forever(interval=60, errback=None):
                 try:
                     func(*args, **kwargs)
                 except Exception as e:
-                    logger.error(
-                        "{}  ==>  {}出现异常了  ==>  {}秒后继续启动".format(
-                            e, func.__name__, interval
-                        )
-                    )
+                    logger.error("{} | {} 出现异常了，{}秒后继续启动".format(e, func.__name__, interval))
                     if errback:
                         errback(e, *args, **kwargs)
                 else:
-                    logger.info(
-                        "{}正常结束了 ==> {}秒后继续启动".format(
-                            func.__name__, interval
-                        )
-                    )
+                    logger.info("{} 正常结束了，{}秒后继续启动".format(func.__name__, interval))
                 finally:
                     time.sleep(interval)
 
@@ -75,7 +91,7 @@ def safe(func, when_failed=False):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logger.error("{}  ==>  {}".format(e, func.__name__))
+            logger.error("{} | {}".format(e, func.__name__))
             return when_failed
 
     return inner
@@ -92,12 +108,12 @@ def retry(times=5, rest=2, is_raise=True, when_all_failed=False):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    logger.error("{}  ==>  {}".format(e, func.__name__))
+                    logger.error("{} | {}".format(e, func.__name__))
                     time.sleep(rest)
                     err = e
             if is_raise:
                 raise err
-            logger.critical("重试全部失败  ==>  {}".format(func.__name__))
+            logger.critical("重试全部失败 | {}".format(func.__name__))
             return when_all_failed
 
         return inner
@@ -132,7 +148,7 @@ def timer(func):
         t1 = time.time()
         result = func(*args, **kwargs)
         t2 = time.time()
-        logger.info("{}耗时{:.4f}秒".format(func.__name__, t2 - t1))
+        logger.info("{} 耗时{:.4f}秒".format(func.__name__, t2 - t1))
         return result
 
     return inner
@@ -145,27 +161,5 @@ def defer(func):
     def inner(*args, **kwargs):
         time.sleep(random.uniform(1, 2))
         return func(*args, **kwargs)
-
-    return inner
-
-
-def retry_request(func):
-    """重试请求"""
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        url = args[1]
-        for i in range(3):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                logger.error(
-                    """
-                    URL         {}
-                    ERROR       {}
-                    TYPE        {}
-                    """.format(url, e, type(e))
-                )
-        logger.critical("Failed  ==>  {}".format(url))
 
     return inner
