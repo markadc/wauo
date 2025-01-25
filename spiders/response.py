@@ -2,6 +2,7 @@ from typing import Callable
 
 from parsel import Selector
 from requests import Response
+
 from wauo.spiders.errors import ResponseCodeError, ResponseTextError
 
 
@@ -25,7 +26,7 @@ class SelectorResponse(Response):
         return sel
 
     def get_one(self, query: str, default=None, strip=True):
-        v = self.selector.xpath(query).get(default)
+        v = self.selector.xpath(query).get(default=default)
         return v.strip() if strip and isinstance(v, str) else v
 
     def get_all(self, query: str, strip=True):
@@ -40,3 +41,11 @@ class SelectorResponse(Response):
     def raise_for_text(self, validate: Callable[[str], bool] = None):
         if validate(self.text) is False:
             raise ResponseTextError("not ideal text")
+
+    def raise_has_text(self, text: str):
+        """有此文本则抛出异常"""
+        assert self.text.find(text) == -1, ResponseTextError("has text: {}".format(text))
+
+    def raise_no_text(self, text: str):
+        """无此文本则抛出异常"""
+        assert self.text.find(text) != -1, ResponseTextError("no text: {}".format(text))

@@ -3,6 +3,7 @@ import random
 import threading
 import time
 from functools import wraps
+from typing import Callable
 
 from loguru import logger
 
@@ -60,7 +61,7 @@ def type_check(func):
     return inner
 
 
-def forever(interval=60, errback=None):
+def forever(interval=60, errback: Callable = None):
     """永远在运行"""
 
     def outer(func):
@@ -70,11 +71,11 @@ def forever(interval=60, errback=None):
                 try:
                     func(*args, **kwargs)
                 except Exception as e:
-                    logger.error("{} | {} 出现异常了，{}秒后继续启动".format(e, func.__name__, interval))
+                    logger.error("{} | {} 出现异常了，{}秒后重新启动".format(e, func.__name__, interval))
                     if errback:
                         errback(e, *args, **kwargs)
                 else:
-                    logger.info("{} 正常结束了，{}秒后继续启动".format(func.__name__, interval))
+                    logger.info("{} 正常结束了，{}秒后重新启动".format(func.__name__, interval))
                 finally:
                     time.sleep(interval)
 
@@ -83,8 +84,8 @@ def forever(interval=60, errback=None):
     return outer
 
 
-def safe(func, when_failed=False):
-    """异常时返回False"""
+def safe(func, failed=False):
+    """异常时返回 failed 的值"""
 
     @wraps(func)
     def inner(*args, **kwargs):
@@ -92,29 +93,27 @@ def safe(func, when_failed=False):
             return func(*args, **kwargs)
         except Exception as e:
             logger.error("{} | {}".format(e, func.__name__))
-            return when_failed
+            return failed
 
     return inner
 
 
-def retry(times=5, rest=2, is_raise=True, when_all_failed=False):
-    """重试（当函数异常时，触发重试，重试全部失败时返回False）"""
+def retry(times=5, rest=2, is_raise=True, failed=False):
+    """重试（当函数异常时，触发重试，重试全部失败时返回 failed 的值）"""
 
     def outer(func):
         @wraps(func)
         def inner(*args, **kwargs):
-            err = None
             for i in range(times + 1):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
+                    if i == times and is_raise is True:
+                        raise e
                     logger.error("{} | {}".format(e, func.__name__))
                     time.sleep(rest)
-                    err = e
-            if is_raise:
-                raise err
             logger.critical("重试全部失败 | {}".format(func.__name__))
-            return when_all_failed
+            return failed
 
         return inner
 
@@ -148,7 +147,7 @@ def timer(func):
         t1 = time.time()
         result = func(*args, **kwargs)
         t2 = time.time()
-        logger.info("{} 耗时{:.4f}秒".format(func.__name__, t2 - t1))
+        logger.info("{} 耗时 {:.4f} 秒".format(func.__name__, t2 - t1))
         return result
 
     return inner
