@@ -12,42 +12,53 @@ from functools import wraps
 
 import requests
 from loguru import logger
+
 from wauo.spiders.errors import MaxRetryError
 from wauo.spiders.response import SelectorResponse
 
 
 class SpiderTools:
-    """爬虫工具"""
+    """
+    爬虫工具类
+
+    提供常用的爬虫辅助功能，包括：
+    - JSONP转JSON
+    - UUID生成
+    - Base64编解码
+    - 随机字符串生成
+    - MD5哈希
+    - 时间戳和时间格式化
+    - Cookie格式转换
+    - 文件保存
+    """
 
     @staticmethod
-    def jsonp2json(jsonp: str):
+    def jsonp2json(jsonp: str) -> dict:
         """jsonp转换为json"""
-        data: dict = json.loads(re.match(".*?({.*}).*", jsonp, re.S).group(1))
-        return data
+        match = re.search(r".*?({.*}).*", jsonp, re.S)
+        if not match:
+            raise ValueError("Invalid JSONP format")
+        return json.loads(match.group(1))
 
     @staticmethod
-    def get_uuid():
+    def get_uuid() -> str:
         """获取uuid"""
-        uuid4 = str(uuid.uuid4())
-        return uuid4
+        return str(uuid.uuid4())
 
     @staticmethod
-    def b64_encode(s: str):
+    def b64_encode(s: str) -> str:
         """base64加密"""
-        encode_value = base64.b64encode(s.encode("utf-8")).decode("utf-8")
-        return encode_value
+        return base64.b64encode(s.encode("utf-8")).decode("utf-8")
 
     @staticmethod
-    def b64_decode(s: str):
+    def b64_decode(s: str) -> str:
         """base64解密"""
-        decode_value = base64.b64decode(s).decode("utf-8")
-        return decode_value
+        return base64.b64decode(s).decode("utf-8")
 
     @staticmethod
-    def rand_str(leng=9):
+    def rand_str(length: int = 9) -> str:
         """获取随机字符串，a-zA-Z0-9"""
-        s = "".join(random.sample(string.ascii_letters + string.digits, leng))
-        return s
+        return "".join(random.sample(string.ascii_letters + string.digits, length))
 
     @staticmethod
     def make_md5(src: str | bytes, *args: str) -> str:
@@ -57,65 +68,74 @@ class SpiderTools:
         hasher.update(data)
         for arg in args:
             hasher.update(str(arg).encode("utf-8"))
-        md5_value = hasher.hexdigest()
-        return md5_value
+        return hasher.hexdigest()
 
     @staticmethod
-    def current_timestamp(is_int=True):
+    def current_timestamp() -> float:
         """当前时间戳"""
-        now = time.time()
-        return int(now) if is_int else now
+        return time.time()
 
     @staticmethod
-    def current_time():
+    def current_time() -> str:
         """当前时间"""
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     @staticmethod
-    def current_date():
+    def current_date() -> str:
         """当前日期"""
         return datetime.now().strftime("%Y-%m-%d")
 
     @staticmethod
     def cookie_to_str(cookie: dict) -> str:
         """Cookie转换为str类型"""
-        cookie_str = ""
-        for key, value in cookie.items():
-            cookie_str += "{}={}; ".format(key, value)
-        return cookie_str.rstrip("; ")
+        return "; ".join(f"{key}={value}" for key, value in cookie.items())
 
     @staticmethod
     def cookie_to_dict(cookie: str) -> dict:
         """Cookie转换为dict类型"""
-        cookie_dict = {kv.split("=")[0]: kv.split("=")[1] for kv in cookie.split("; ")}
-        return cookie_dict
+        return {
+            kv.split("=", 1)[0]: kv.split("=", 1)[1]
+            for kv in cookie.split("; ")
+            if "=" in kv
+        }
 
     @staticmethod
     def save_file(path: str, content: str | bytes, encoding="UTF-8"):
         """保存文件"""
         mode = "wb" if isinstance(content, bytes) else "w"
         p_dir = os.path.dirname(os.path.abspath(path))
-        if not os.path.exists(p_dir):
-            os.makedirs(p_dir)
+        os.makedirs(p_dir, exist_ok=True)
         with open(path, mode, encoding=None if mode == "wb" else encoding) as f:
             f.write(content)
 
 
 class BaseSpider(SpiderTools):
-    """爬虫基类"""
+    """
+    爬虫基类
+
+    提供爬虫的基础功能：
+    - User-Agent管理
+    - 代理设置
+    - 请求延迟和超时控制
+    - 错误处理配置
+    """
 
     def __init__(self, ua_way: str = "local", proxies: dict = None, delay=0, timeout=5):
         assert ua_way in ["api", "local"]
         if ua_way == "api":
             from fake_useragent import UserAgent
+
             self.ua = UserAgent()
         else:
             from wauo.utils import make_ua
+
             self.gen_ua = make_ua
         self.proxies = proxies or {}
         self.delay = delay
         self.timeout = timeout
-        self._raise_request_error = True  # True，请求异常则抛出异常；False，请求异常则响应返回None
+        self._raise_request_error = (
+            True  # True，请求异常则抛出异常；False，请求异常则响应返回None
+        )
 
     def allow_request_failed(self):
         """允许请求失败，此时响应为None"""
@@ -141,6 +161,7 @@ class BaseSpider(SpiderTools):
     def update_delay(self, value: float | int):
         self.delay = value
 
+
 def auto_retry(func):
     """重试请求"""
 
@@ -152,28 +173,38 @@ def auto_retry(func):
                 return func(*args, **kwargs)
             except Exception as e:
                 logger.error(
+                    f"""
+                    URL         {url}
+                    ERROR       {e}
+                    TYPE        {type(e)}
                     """
-                    URL         {}
-                    ERROR       {}
-                    TYPE        {}
-                    """.format(url, e, type(e))
                 )
-        logger.critical("Failed | {}".format(url))
+        logger.critical(f"Failed => {url}")
+        return None
 
     return inner
 
 
 class WauoSpider(BaseSpider):
-    """该爬虫默认保持会话状态"""
+    """
+    高级爬虫类
 
-    def __init__(self, session=True, default_headers: dict = None, ua_way="local", proxies: dict = None, delay=0, timeout=5):
+    继承BaseSpider，提供更强大的功能：
+    - 会话状态保持
+    - 默认请求头管理
+    - 自动重试机制
+    - 多种请求方法
+    - 文件下载功能
+    """
+
+    def __init__(self, is_session=True, default_headers: dict = None, ua_way="local", proxies: dict = None, delay=0, timeout=5):
         super().__init__(ua_way=ua_way, proxies=proxies, delay=delay, timeout=timeout)
-        self.client = requests.Session() if session else requests
+        self.client = requests.Session() if is_session else requests
         self.default_headers = default_headers or {}
 
     def update_default_headers(self, **kwargs):
         """更新默认headers，若key重复，则替换原有key"""
-        for k, v in kwargs:
+        for k, v in kwargs.items():
             self.default_headers[k] = v
 
     def add_field(self, headers: dict):
@@ -184,11 +215,11 @@ class WauoSpider(BaseSpider):
     @staticmethod
     def elog(url: str, e: Exception, times: int):
         logger.error(
+            f"""
+            URL         {url}
+            ERROR       {e}
+            TIMES       {times}
             """
-            URL         {}
-            ERROR       {}
-            TIMES       {}
-            """.format(url, e, times)
         )
 
     def do(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int | float = 5, **kwargs) -> SelectorResponse:
@@ -199,7 +230,8 @@ class WauoSpider(BaseSpider):
         res = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
         return SelectorResponse(res)
 
-    def goto(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int = 5, retry=2, delay=1, keep=True, **kwargs) -> SelectorResponse:
+    def goto(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int = 5, retry=2, delay=1, keep=True,
+             **kwargs) -> SelectorResponse:
         """
         获取响应，自带重试
 
@@ -227,10 +259,11 @@ class WauoSpider(BaseSpider):
                 time.sleep(delay)
 
         if self._raise_request_error:
-            raise MaxRetryError("URL => {}".format(url))
+            raise MaxRetryError(f"URL => {url}")
 
     @auto_retry
-    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None, delay: int | float = None, **kwargs) -> SelectorResponse:
+    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None,
+             delay: int | float = None, **kwargs) -> SelectorResponse:
         """
         发送请求，获取响应
         默认为GET请求，如果传入了data或者json参数则为POST请求
@@ -271,9 +304,14 @@ class WauoSpider(BaseSpider):
     def download(self, url: str, path: str, bin=True, encoding="UTF-8"):
         """默认下载二进制"""
         resp = self.send(url)
+        if resp is None:
+            raise MaxRetryError(f"Failed to download {url}")
         content = resp.content if bin else resp.text
         self.save_file(path, content, encoding)
 
     def get_local_ip(self) -> str:
         """获取本地IP"""
-        return self.send("https://httpbin.org/ip").json()["origin"]
+        resp = self.send("https://httpbin.org/ip")
+        if resp is None:
+            raise MaxRetryError("Failed to get local IP")
+        return resp.json()["origin"]
