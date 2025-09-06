@@ -120,29 +120,23 @@ class BaseSpider(SpiderTools):
     - 错误处理配置
     """
 
-    def __init__(self, ua_way: str = "local", proxies: dict = None, delay=0, timeout=5):
+    def __init__(self, ua_way="local", proxies: dict = None, delay=0, timeout=5):
         assert ua_way in ["api", "local"]
         if ua_way == "api":
             from fake_useragent import UserAgent
-
             self.ua = UserAgent()
         else:
             from wauo.utils import make_ua
-
             self.gen_ua = make_ua
+
         self.proxies = proxies or {}
         self.delay = delay
         self.timeout = timeout
-        self._raise_request_error = (
-            True  # True，请求异常则抛出异常；False，请求异常则响应返回None
-        )
-
-    def allow_request_failed(self):
-        """允许请求失败，此时响应为None"""
-        self._raise_request_error = False
+        self.is_raise_error = True  # 是否抛出异常（当请求异常时）
+        self.is_merge_default_headers = True  # 是否合并默认请求头（当发送请求时）
 
     def get_headers(self) -> dict:
-        """获取一个有随机ua的headers"""
+        """获取headers"""
         headers = {"User-Agent": self.get_ua()}
         return headers
 
@@ -155,15 +149,9 @@ class BaseSpider(SpiderTools):
         """获取代理"""
         return self.proxies
 
-    def update_timeout(self, value: float | int):
-        self.timeout = value
 
-    def update_delay(self, value: float | int):
-        self.delay = value
-
-
-def auto_retry(func):
-    """重试请求"""
+def retry_request(func):
+    """请求异常时重试2次"""
 
     @wraps(func)
     def inner(*args, **kwargs):
@@ -174,13 +162,14 @@ def auto_retry(func):
             except Exception as e:
                 logger.error(
                     f"""
-                    URL         {url}
-                    ERROR       {e}
-                    TYPE        {type(e)}
+                    url         {url}
+                    error       {e}
+                    type        {type(e)}
                     """
                 )
         logger.critical(f"Failed => {url}")
-        return None
+        if args[0].is_raise_error:
+            raise MaxRetryError(url)
 
     return inner
 
@@ -207,7 +196,7 @@ class WauoSpider(BaseSpider):
         for k, v in kwargs.items():
             self.default_headers[k] = v
 
-    def add_field(self, headers: dict):
+    def merge_headers(self, headers: dict):
         """为headers补充默认default_headers的字段"""
         for k, v in self.default_headers.items():
             headers.setdefault(k, v)
@@ -216,96 +205,121 @@ class WauoSpider(BaseSpider):
     def elog(url: str, e: Exception, times: int):
         logger.error(
             f"""
-            URL         {url}
-            ERROR       {e}
-            TIMES       {times}
+            url         {url}
+            error       {e}
+            times       {times}
             """
         )
 
-    def do(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int | float = 5, **kwargs) -> SelectorResponse:
-        """默认为GET请求，传递了data或者json参数则为POST请求"""
-        headers, proxies = headers or self.get_headers(), proxies or self.get_proxies()
-        self.add_field(headers)
-        same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs)
-        res = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
-        return SelectorResponse(res)
-
-    def goto(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int = 5, retry=2, delay=1, keep=True,
-             **kwargs) -> SelectorResponse:
-        """
-        获取响应，自带重试
-
-        Parameters
-        ----------
-        retry   请求出现异常时，进行重试的次数
-        delay   重试前先睡眠多少秒
-        keep    所有的请求是否保持同一个headers，仅在headers为None时生效
-        kwargs  跟requests的参数保持一致
-
-        Returns
-        -------
-        SelectorResponse，可以使用Xpath、CSS
-        """
-        headers2 = headers or self.get_headers()
-        for i in range(retry + 1):
-            headers2, proxies = headers2 if keep or headers else self.get_headers(), proxies or self.get_proxies()
-            self.add_field(headers2)
-            same = dict(headers=headers2, params=params, proxies=proxies, timeout=timeout, **kwargs)
-            try:
-                resp = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
-                return SelectorResponse(resp)
-            except Exception as e:
-                self.elog(url, e, i + 1)
-                time.sleep(delay)
-
-        if self._raise_request_error:
-            raise MaxRetryError(f"URL => {url}")
-
-    @auto_retry
-    def send(self, url: str, headers: dict = None, params: dict = None, proxies: dict = None, timeout: float | int = None, data: dict | str = None, json: dict = None, cookie: str = None,
-             delay: int | float = None, **kwargs) -> SelectorResponse:
+    @retry_request
+    def send(
+            self,
+            url: str,
+            headers: dict = None,
+            params: dict = None,
+            data: dict | str = None,
+            json: dict = None,
+            proxies: dict = None,
+            timeout: float | int = None,
+            cookie: str = None,
+            delay: int | float = None,
+            **kwargs
+    ) -> SelectorResponse:
         """
         发送请求，获取响应
-        默认为GET请求，如果传入了data或者json参数则为POST请求
-        返回的响应对象可以直接使用Xpath、CSS
+        - 默认为GET请求，如果传入了data或者json参数则为POST请求
+        - 返回的响应对象可以直接使用Xpath、CSS
 
-        Parameters
-        ----------
-        url     请求地址
-        headers 请求头
-        proxies 代理
-        timeout 超时
-        data    请求体form-data
-        json    请求体json
-        cookie  为headers补充Cookie字段，如果headers已存在Cookie字段则不生效
-        delay   延迟请求的秒数
-        kwargs  跟requests的参数保持一致
+        Args:
+            cookie: 为headers补充Cookie字段
+            delay: 延迟多少秒后才请求
+            **kwargs: 跟requests的参数保持一致
 
-        Returns
-        -------
-        SelectorResponse，可以使用Xpath、CSS
+        Returns:
+            SelectorResponse（可以使用Xpath、CSS）
         """
         delay = delay or self.delay
         time.sleep(delay)
 
         proxies = proxies or self.get_proxies()
-        headers = headers or self.get_headers()
+        timeout = timeout or self.timeout
 
-        headers.setdefault("User-Agent", self.get_ua())
+        headers = headers or self.get_headers()
         if cookie:
             headers.setdefault("Cookie", cookie)
-        for key, value in self.default_headers.items():
-            headers.setdefault(key, value)
+        if self.is_merge_default_headers:
+            headers = self.default_headers | headers
 
-        same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout or self.timeout, **kwargs)
+        same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs)
         response = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
         return SelectorResponse(response)
 
+    def do(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int | float = 5, **kwargs) -> SelectorResponse:
+        """默认为GET请求，传递了data或者json参数则为POST请求"""
+        headers = headers or self.get_headers()
+        if self.is_merge_default_headers:
+            headers = self.default_headers | headers
+        proxies = proxies or self.get_proxies()
+        same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs)
+        res = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
+        return SelectorResponse(res)
+
+    def go(
+            self,
+            url: str,
+            headers: dict = None,
+            params: dict = None,
+            data: dict | str = None,
+            json: dict = None,
+            proxies: dict = None,
+            timeout=5,
+            retry_times=2,
+            retry_delay=1,
+            keep_headers=True,
+            **kwargs
+    ) -> SelectorResponse:
+        """
+        获取响应，自带重试
+
+        Args:
+            retry_times: 请求出现异常时，进行重试的次数
+            retry_delay: 重试前先睡眠多少秒
+            keep_headers: 请求时是否保持同一个headers
+            **kwargs: 跟requests的参数保持一致
+
+        Returns:
+            SelectorResponse（可以使用Xpath、CSS）
+        """
+
+        headers = headers or self.get_headers() if keep_headers else {}
+        if headers and self.is_merge_default_headers:
+            headers = self.default_headers | headers
+
+        for i in range(retry_times + 1):
+            headers = headers or self.get_headers()
+            proxies = proxies or self.get_proxies()
+            same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs)
+            try:
+                resp = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
+                return SelectorResponse(resp)
+            except Exception as e:
+                logger.error(
+                    f"""
+                    url         {url}
+                    error       {e}
+                    times       {i + 1}
+                    """
+                )
+                time.sleep(retry_delay)
+
+        if self.is_raise_error:
+            raise MaxRetryError(url)
+
     def download(self, url: str, path: str, bin=True, encoding="UTF-8"):
-        """默认下载二进制"""
+        """下载"""
         resp = self.send(url)
         if resp is None:
-            raise MaxRetryError(f"Failed to download {url}")
+            raise Exception(f"Failed to download {url}")
         content = resp.content if bin else resp.text
         self.save_file(path, content, encoding)
 
@@ -313,5 +327,11 @@ class WauoSpider(BaseSpider):
         """获取本地IP"""
         resp = self.send("https://httpbin.org/ip")
         if resp is None:
-            raise MaxRetryError("Failed to get local IP")
+            raise Exception("Failed to get local IP")
         return resp.json()["origin"]
+
+
+if __name__ == '__main__':
+    s = WauoSpider()
+    s.is_raise_error = False
+    s.send("aaa")
