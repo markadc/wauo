@@ -1,11 +1,20 @@
+# 项目说明
+
+- Python工具大全。爬虫、装饰器（计时器、类型强校验...）、线程池（内存不溢出）、快速地操作数据库（MySQL、PostgreSQL）等
+
 # 安装
 
 ```bash
 pip install wauo -U
 ```
 
+# Python解释器
+
+- python3.10+
+
 # 更新历史
 
+- 新增db，操作MySQL、PostgreSQL数据库
 - 新增`jsonp2json`静态方法
 - 爬虫默认保持会话状态
 - 新增`get_uuid`、`base64`加解密的静态方法
@@ -31,17 +40,60 @@ pip install wauo -U
 - cprint参数有误则默认不加入颜色打印
 - 一些优化，新增raise_for_status、raise_for_text、do方法、函数文档模板修改等
 
-# 项目说明
+# 如何使用
 
-- 基于requests封装的一个爬虫
+## 数据库
 
-# Python解释器
+### PostgreSQL
 
-- python3.10+
+- 使用
 
-# 如何使用？
+```python
+from wauo.db import PostgresqlClient
 
-## 开始导入
+psql_cfg = {
+    "host": "localhost",
+    "port": 5432,
+    "db": "test",
+    "user": "wauo",
+    "password": "admin1",
+}
+psql = PostgresqlClient(**psql_cfg)
+psql.connect()
+
+name = 'temp'
+
+# 删除表
+psql.drop_table(name)
+print(f"表 {name} 已删除（如果存在）")
+
+# 创建新表
+psql.create_table(name, ['name', 'age'])
+
+# 插入数据
+n = psql.insert_one(name, {'name': 'Alice', 'age': 30})
+print(f"插入的行数: {n}")
+psql.insert_many(name, [{'name': 'Bob', 'age': 25}, {'name': 'Charlie', 'age': 35}])
+print(f"批量插入的行数: {n}")
+
+# 查询数据
+lines = psql.query(f"SELECT * FROM {name}")
+for line in lines:
+    print(dict(line))
+
+# 更新数据
+n = psql.update(name, {'age': 31}, "name = %s", ('Alice',))
+print(f"更新的行数: {n}")
+
+# 删除数据
+psql.delete(name, "name = %s", ('Bob',))
+print("删除了 Bob 的记录")
+
+```
+
+## 爬虫
+
+### 简单使用
 
 ```python
 from wauo import WauoSpider
