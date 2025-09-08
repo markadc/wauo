@@ -101,10 +101,9 @@ from wauo import WauoSpider
 spider = WauoSpider()
 ```
 
-## 请求
+#### 请求
 
-### GET
-
+- GET
 - 默认是get请求
 
 ```python
@@ -113,8 +112,7 @@ resp = spider.send(url)
 print(resp.text)
 ```
 
-### POST
-
+- POST
 - 使用了`data`或者`json`参数，则是post请求
 
 ```python
@@ -127,12 +125,11 @@ resp = spider.send(api, data=payload)  # 使用data参数
 resp = spider.send(api, json=payload)  # 使用json参数
 ```
 
-## 响应
+#### 响应
 
-### 校验响应
+##### 校验响应
 
-#### 1、限制响应码
-
+- 1、限制响应码
 - 如果响应码不在codes范围里则引发异常
 
 ```python
@@ -140,8 +137,7 @@ resp = spider.send('https://github.com/markadc')
 resp.raise_for_status(codes=[301, 302])
 ```
 
-#### 2、限制响应内容
-
+- 2、限制响应内容
 - 如果is_ok返回False则引发异常
 
 ```python
@@ -153,12 +149,12 @@ resp = spider.send('https://wenku.baidu.com/wkvcode.html')
 resp.raise_for_text(validate=is_ok)
 ```
 
-## 设置默认请求配置
+### 设置默认请求配置
 
 - 给headers设置Cookie
 - ...
 
-### 例子1
+#### 例子1
 
 - 每一次请求的headers都带上`cookie`
 
