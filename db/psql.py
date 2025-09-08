@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from loguru import logger as log
 from psycopg2 import OperationalError
 from psycopg2.extras import RealDictCursor
@@ -44,27 +46,25 @@ class PostgresqlClient:
             raise
 
     def get_connection(self):
-        """从 连接池 获取一个 数据库连接"""
+        """从连接池获取一个数据库连接"""
         if not self.pool:
             self.connect()
         return self.pool.getconn()
 
     def release_connection(self, conn):
-        """将 数据库连接 归还到 连接池"""
+        """将数据库连接归还到连接池"""
         if conn:
             self.pool.putconn(conn)
 
-    def execute(self, query: str, args: tuple = None) -> int:
-        """ 执行 SQL 语句"""
+    @contextmanager
+    def connection(self):
+        """上下文管理器，用于自动获取和释放数据库连接"""
         conn = None
         try:
             conn = self.get_connection()
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(query, args)
-            conn.commit()
-            return cursor.rowcount
+            yield conn
         except Exception as e:
-            print(f"执行 SQL 失败: {e}")
+            log.error(f"数据库操作失败: {e}")
             if conn:
                 conn.rollback()
             raise
@@ -72,35 +72,27 @@ class PostgresqlClient:
             if conn:
                 self.release_connection(conn)
 
+    def execute(self, query: str, args: tuple = None) -> int:
+        """执行 SQL 语句"""
+        with self.connection() as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(query, args)
+            conn.commit()
+            return cursor.rowcount
+
     def fetchall(self, query: str, args: tuple = None) -> list:
         """查询所有结果"""
-        conn = None
-        try:
-            conn = self.get_connection()
+        with self.connection() as conn:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(query, args)
             return cursor.fetchall() or []
-        except Exception as e:
-            log.error(f"查询失败: {e}")
-            raise
-        finally:
-            if conn:
-                self.release_connection(conn)
 
     def fetchone(self, query: str, args: tuple = None):
         """查询单条结果"""
-        conn = None
-        try:
-            conn = self.get_connection()
+        with self.connection() as conn:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(query, args)
             return cursor.fetchone() or {}
-        except Exception as e:
-            log.error(f"查询失败: {e}")
-            raise
-        finally:
-            if conn:
-                self.release_connection(conn)
 
     def query(self, query: str, args: tuple = None):
         """查询"""
@@ -118,7 +110,6 @@ class PostgresqlClient:
         if not datas:
             raise ValueError("数据列表不能为空")
 
-        # 确保所有记录的字段一致
         first_keys = set(datas[0].keys())
         for item in datas:
             if set(item.keys()) != first_keys:
@@ -129,33 +120,31 @@ class PostgresqlClient:
         query = f"INSERT INTO {table} ({columns}) VALUES ({values})"
         params = [tuple(item.values()) for item in datas]
 
-        conn = None
-        try:
-            conn = self.get_connection()
+        with self.connection() as conn:
             cursor = conn.cursor()
             cursor.executemany(query, params)
             conn.commit()
             return cursor.rowcount
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            print(f"批量插入失败: {e}")
-            raise
-        finally:
-            if conn:
-                self.release_connection(conn)
 
     def update(self, table: str, updated: dict, where_clause, where_params=None):
         """更新"""
         set_clause = ', '.join([f"{k} = %s" for k in updated.keys()])
         query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
         params = tuple(updated.values()) + (where_params or ())
-        return self.execute(query, params)
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            conn.commit()
+            return cursor.rowcount
 
     def delete(self, table: str, where_clause: str, where_params: tuple = None):
         """删除"""
         query = f"DELETE FROM {table} WHERE {where_clause}"
-        return self.execute(query, where_params)
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, where_params)
+            conn.commit()
+            return cursor.rowcount
 
     def __enter__(self):
         self.connect()
