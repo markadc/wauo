@@ -109,48 +109,7 @@ class SpiderTools:
             f.write(content)
 
 
-class BaseSpider(SpiderTools):
-    """
-    爬虫基类
-
-    提供爬虫的基础功能：
-    - User-Agent管理
-    - 代理设置
-    - 请求延迟和超时控制
-    - 错误处理配置
-    """
-
-    def __init__(self, ua_way="local", proxies: dict = None, delay=0, timeout=5):
-        assert ua_way in ["api", "local"]
-        if ua_way == "api":
-            from fake_useragent import UserAgent
-            self.ua = UserAgent()
-        else:
-            from wauo.utils import make_ua
-            self.gen_ua = make_ua
-
-        self.proxies = proxies or {}
-        self.delay = delay
-        self.timeout = timeout
-        self.is_raise_error = True  # 是否抛出异常（当请求异常时）
-        self.is_merge_default_headers = True  # 是否合并默认请求头（当发送请求时）
-
-    def get_headers(self) -> dict:
-        """获取headers"""
-        headers = {"User-Agent": self.get_ua()}
-        return headers
-
-    def get_ua(self) -> str:
-        """获取一个随机ua"""
-        ua = self.gen_ua() if hasattr(self, "gen_ua") else self.ua.random
-        return ua
-
-    def get_proxies(self) -> dict:
-        """获取代理"""
-        return self.proxies
-
-
-def retry_request(func):
+def retry(func):
     """请求异常时重试2次"""
 
     @wraps(func)
@@ -168,50 +127,55 @@ def retry_request(func):
                     """
                 )
         logger.critical(f"Failed => {url}")
-        if args[0].is_raise_error:
-            raise MaxRetryError(url)
 
     return inner
 
 
-class WauoSpider(BaseSpider):
-    """
-    高级爬虫类
+class BaseSpider(SpiderTools):
+    def __init__(
+            self,
+            is_session=True,
+            default_headers: dict = None,
+            default_proxies: dict = None,
+            default_delay=0,
+            default_timeout=5,
+            ua_way="local",
+    ):
+        assert ua_way in ["api", "local"]
+        if ua_way == "api":
+            from fake_useragent import UserAgent
 
-    继承BaseSpider，提供更强大的功能：
-    - 会话状态保持
-    - 默认请求头管理
-    - 自动重试机制
-    - 多种请求方法
-    - 文件下载功能
-    """
+            self.ua_api = UserAgent()
+        else:
+            from wauo.utils import make_ua
 
-    def __init__(self, is_session=True, default_headers: dict = None, ua_way="local", proxies: dict = None, delay=0, timeout=5):
-        super().__init__(ua_way=ua_way, proxies=proxies, delay=delay, timeout=timeout)
+            self.ua_local = make_ua
+
         self.client = requests.Session() if is_session else requests
+
         self.default_headers = default_headers or {}
+        self.default_proxies = default_proxies or {}
+        self.default_delay = default_delay
+        self.default_timeout = default_timeout
 
-    def update_default_headers(self, **kwargs):
-        """更新默认headers，若key重复，则替换原有key"""
-        for k, v in kwargs.items():
-            self.default_headers[k] = v
+        self.is_raise_error = True  # 是否抛出异常（当请求异常时）
+        self.is_merge_default_headers = True  # 是否合并默认请求头（当发送请求时）
 
-    def merge_headers(self, headers: dict):
-        """为headers补充默认default_headers的字段"""
-        for k, v in self.default_headers.items():
-            headers.setdefault(k, v)
+    def get_headers(self) -> dict:
+        """获取headers"""
+        headers = {"User-Agent": self.get_ua()}
+        return headers
 
-    @staticmethod
-    def elog(url: str, e: Exception, times: int):
-        logger.error(
-            f"""
-            url         {url}
-            error       {e}
-            times       {times}
-            """
-        )
+    def get_ua(self) -> str:
+        """获取一个随机ua"""
+        ua = self.ua_local() if hasattr(self, "ua_local") else self.ua_api.random
+        return ua
 
-    @retry_request
+    def get_proxies(self) -> dict:
+        """获取代理"""
+        return self.default_proxies
+
+    @retry
     def send(
             self,
             url: str,
@@ -223,7 +187,7 @@ class WauoSpider(BaseSpider):
             timeout: float | int = None,
             cookie: str = None,
             delay: int | float = None,
-            **kwargs
+            **kwargs,
     ) -> SelectorResponse:
         """
         发送请求，获取响应
@@ -238,11 +202,11 @@ class WauoSpider(BaseSpider):
         Returns:
             SelectorResponse（可以使用Xpath、CSS）
         """
-        delay = delay or self.delay
+        delay = delay or self.default_delay
         time.sleep(delay)
 
         proxies = proxies or self.get_proxies()
-        timeout = timeout or self.timeout
+        timeout = timeout or self.default_timeout
 
         headers = headers or self.get_headers()
         if cookie:
@@ -250,11 +214,59 @@ class WauoSpider(BaseSpider):
         if self.is_merge_default_headers:
             headers = self.default_headers | headers
 
-        same = dict(headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs)
-        response = self.client.get(url, **same) if data is None and json is None else self.client.post(url, data=data, json=json, **same)
+        same = dict(
+            headers=headers, params=params, proxies=proxies, timeout=timeout, **kwargs
+        )
+        response = (
+            self.client.get(url, **same)
+            if data is None and json is None
+            else self.client.post(url, data=data, json=json, **same)
+        )
         return SelectorResponse(response)
 
-    def do(self, url: str, headers: dict = None, params: dict = None, data: dict | str = None, json: dict = None, proxies: dict = None, timeout: int | float = 5, **kwargs) -> SelectorResponse:
+
+class WauoSpider(BaseSpider):
+    """
+    高级爬虫类
+
+    继承BaseSpider，提供更强大的功能：
+    - 会话状态保持
+    - 默认请求头管理
+    - 自动重试机制
+    - 多种请求方法
+    - 文件下载功能
+    """
+
+    def __init__(
+            self,
+            is_session=True,
+            default_headers: dict = None,
+            default_proxies: dict = None,
+            default_delay=0,
+            default_timeout=5,
+            ua_way="local",
+    ):
+        super().__init__(
+            is_session=is_session,
+            default_headers=default_headers,
+            ua_way=ua_way,
+            default_proxies=default_proxies,
+            default_delay=default_delay,
+            default_timeout=default_timeout,
+        )
+        self.is_raise_error = True
+
+    def do(
+            self,
+            url: str,
+            headers: dict = None,
+            params: dict = None,
+            data: dict | str = None,
+            json: dict = None,
+            proxies: dict = None,
+            timeout: int | float = 5,
+            **kwargs,
+    ) -> SelectorResponse:
         """默认为GET请求，传递了data或者json参数则为POST请求"""
         headers = headers or self.get_headers()
         if self.is_merge_default_headers:
@@ -276,7 +288,7 @@ class WauoSpider(BaseSpider):
             retry_times=2,
             retry_delay=1,
             keep_headers=True,
-            **kwargs
+            **kwargs,
     ) -> SelectorResponse:
         """
         获取响应，自带重试
@@ -315,17 +327,13 @@ class WauoSpider(BaseSpider):
         if self.is_raise_error:
             raise MaxRetryError(url)
 
-    def download(self, url: str, path: str, bin=True, encoding="UTF-8"):
-        """下载"""
+    def download(self, url: str, save_path: str, is_text_type=False, encoding="UTF-8"):
+        """下载文件"""
         resp = self.send(url)
-        if resp is None:
-            raise Exception(f"Failed to download {url}")
-        content = resp.content if bin else resp.text
-        self.save_file(path, content, encoding)
+        content = resp.text if is_text_type else resp.content
+        self.save_file(save_path, content, encoding)
 
     def get_local_ip(self) -> str:
         """获取本地IP"""
         resp = self.send("https://httpbin.org/ip")
-        if resp is None:
-            raise Exception("Failed to get local IP")
         return resp.json()["origin"]
