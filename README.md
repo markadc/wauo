@@ -172,8 +172,9 @@ p.output("This is a custom color message", "magenta")
 
 ![_printer.png](_printer.png)
 
-### type_check
+### 函数参数类型强校验
 
+- type_check
 - 根据注解检查函数的参数类型，类型不一致则报错
 
 ```python
@@ -194,9 +195,10 @@ add(1, "2")  # 参数 'y' 应该是 <class 'int'> 而不是 <class 'str'>
 
 ```
 
-### nget
+### 字典多层取值
 
-字典多层取值
+- nget
+- 字典多层取值，键不存在则返回设定的默认值
 
 ```python
 from wauo.utils import nget

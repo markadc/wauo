@@ -37,13 +37,13 @@ if __name__ == "__main__":
 
     def work(x):
         p.yellow(f'{x} 执行中')
-        time.sleep(random.uniform(1, 3))
+        time.sleep(random.uniform(0, 3))
         p.green(f'{x} 已完成')
 
 
     pool = LimitedThreadPool(max_workers=3)
 
-    for i in range(20):
+    for i in range(10):
         pool.submit(work, i + 1)
 
     pool.shutdown()
