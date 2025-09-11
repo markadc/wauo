@@ -305,9 +305,9 @@ class WauoSpider(BaseSpider):
             except Exception as e:
                 logger.error(
                     f"""
-                    url         {url}
-                    error       {e}
-                    times       {i + 1}
+                    url             {url}
+                    error           {e} => {type(e)}
+                    retey_times     {i}/{retry_times}
                     """
                 )
                 time.sleep(retry_delay)
@@ -329,9 +329,3 @@ class WauoSpider(BaseSpider):
         if resp is None:
             raise Exception("Failed to get local IP")
         return resp.json()["origin"]
-
-
-if __name__ == '__main__':
-    s = WauoSpider()
-    s.is_raise_error = False
-    s.send("aaa")
