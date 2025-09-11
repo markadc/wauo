@@ -267,7 +267,7 @@ class WauoSpider(BaseSpider):
             timeout: int | float = 5,
             **kwargs,
     ) -> SelectorResponse:
-        """默认为GET请求，传递了data或者json参数则为POST请求"""
+        """默认为 GET 请求，传递了 data 或者 json 参数则为 POST 请求"""
         headers = headers or self.get_headers()
         if self.is_merge_default_headers:
             headers = self.default_headers | headers

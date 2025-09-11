@@ -10,7 +10,16 @@ from pymysql.cursors import DictCursor
 class MysqlClient:
     """MySQL客户端"""
 
-    def __init__(self, host="localhost", port=3306, user="root", password: str = None, database: str = None, charset="utf8mb4", **pool_kwargs):
+    def __init__(
+            self,
+            host="localhost",
+            port=3306,
+            user="root",
+            password: str = None,
+            database: str = None,
+            charset="utf8mb4",
+            **pool_kwargs,
+    ):
         self.config = {
             "host": host,
             "port": port,
@@ -312,32 +321,39 @@ class MysqlClient:
         """析构函数"""
         self.close()
 
+    def create_table(self, name: str, fields: list[str], gen_id=False):
+        """创建数据表
+
+        Args:
+            name: 表名
+            fields: 字段列表，每个字段名，默认类型为varchar(255)
+            gen_id: 是否生成自增ID字段
+        """
+        if not name or not name.strip():
+            raise ValueError("表名不能为空")
+
+        if not fields or not all(isinstance(f, str) and f.strip() for f in fields):
+            raise ValueError("字段列表不能为空且必须为字符串")
+
+        try:
+            # 将字段名转换为varchar(255)格式
+            field_definitions = [f"`{field.strip()}` VARCHAR(255)" for field in fields]
+
+            if gen_id:
+                field_definitions.insert(0, "`id` INT AUTO_INCREMENT PRIMARY KEY")
+
+            sql = f"CREATE TABLE IF NOT EXISTS `{name}` ({', '.join(field_definitions)}) ENGINE=InnoDB DEFAULT CHARSET={self.config.get('charset', 'utf8mb4')}"
+
+            self.execute(sql)
+            logger.info(f"数据表 `{name}` 创建成功或已存在")
+        except Exception as e:
+            logger.error(f"创建数据表 `{name}` 失败: {e}")
+            raise
+
 
 if __name__ == "__main__":
-    # 使用URL创建连接
-    db = MysqlClient.from_url("mysql://root:root@0@localhost:3306/test")
-    print(id(db))
-    print(db.get_pool_status())
-
-    # 带查询参数的URL
-    db = MysqlClient.from_url(
-        "mysql://root:root@0@localhost:3306/test?charset=utf8mb4&mincached=5&maxcached=20"
-    )
-    print(id(db))
-    print(db.get_pool_status())
-
-    # 也可以混合使用
-    db = MysqlClient.from_url(
-        "mysql://root:root@0@localhost:3306/test", mincached=10, maxconnections=200
-    )
-
-    print(id(db))
-    print(db.get_pool_status())
-
-    db = MysqlClient(password="root@0", database="test")
-    print(id(db))
-    print(db.get_pool_status())
-
-    db = MysqlClient(password="root@0", database="test")
-    print(id(db))
-    print(db.get_pool_status())
+    db = MysqlClient.from_url("mysql://root:admin0@localhost:3306/test")
+    db.create_table("test_911", ["name", "email"])
+    r = db.insert_one("test_911", {"name": "wauo", "email": "wauo@qq.com"})
+    print(r)
+    print(db.fetchall("SELECT * FROM test_911"))
