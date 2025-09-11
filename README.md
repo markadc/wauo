@@ -175,13 +175,49 @@ print(resp1.request.headers)
 print(resp2.request.headers)
 ```
 
-# 一些工具
+## 使用工具
+
+### nget
+
+字典多层取值
+
+```python
+from wauo.utils import nget
+
+item = {
+    "data": {
+        "info": {
+            "user1": {"name": "Charo", "age": 18},
+            "user2": {"name": "Jack", "age": 20},
+            "user3": {"name": "Peter", "age": 22},
+        }
+    }
+}
+
+print(nget(item, "data.info.user1.name"))
+# Charo
+
+print(nget(item, "data.info.user2.age"))
+# 20
+
+print(nget(item, "data.info.user3"))
+# {'name': 'Peter', 'age': 22}
+
+print(nget(item, "data.info.user4", failed="不存在"))
+# 不存在
+
+print(nget(item, "data.info"))
+# {'user1': {'name': 'Charo', 'age': 18}, 'user2': {'name': 'Jack', 'age': 20}, 'user3': {'name': 'Peter', 'age': 22}}
+
+```
+
+## 工具说明
 
 - 传入变量，可以直接打印该变量的字符串名称、实际值
 
 - 时间戳转时间、时间转时间戳、获取今天任意时刻的时间戳
 
-- 字典多层取值，KEY不存在则返回设定的默认值
+- 字典多层取值，键不存在则返回设定的默认值
 
 - 处理线程任务，有序获取（先返回的靠前）所有线程的返回值（异常的线程、假值除外）
 
