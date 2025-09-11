@@ -2,4 +2,3 @@
 .vscode
 *.py[cod]
 .DS_Store
-_tests/
