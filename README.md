@@ -1,32 +1,137 @@
-# 项目说明
+# Wauo - Python 工具大全
 
-Python工具大全。
+🚀 一个功能强大且易于使用的 Python 工具库，集成了爬虫、装饰器、线程池、数据库操作等实用功能。
 
-- 爬虫
-- 装饰器（计时器、类型强校验...）
-- 线程池（内存不溢出）
-- 快速地操作数据库（MySQL、PostgreSQL）
-- ...
+[English](README_EN.md) | [中文](README.md)
 
-# 安装
+## ✨ 核心特性
+
+- **🕷️ 爬虫模块** - 简化的 HTTP 请求、响应处理和数据提取
+- **🔧 装饰器集合** - 类型强校验、函数计时、错误处理等
+- **⚡ 线程池管理** - 内存安全的线程池，自动防溢出
+- **🗄️ 数据库支持** - 快速操作 MySQL 和 PostgreSQL
+- **🎨 彩色输出** - 美观的终端颜色输出
+- **📦 工具函数** - 多层字典取值、时间戳转换等实用工具
+
+## 📋 系统要求
+
+- Python 3.10 或更高版本
+- 依赖包：requests, parsel, fake_useragent, loguru, pymysql, psycopg2, dbutils
+
+## 🔧 安装
+
+### 使用 pip（推荐）
 
 ```bash
 pip install wauo -U
 ```
 
-# Python解释器
+### 升级到最新版本
 
-- python3.10+
+```bash
+pip install --upgrade wauo
+```
 
-# 如何使用？
+## 📚 使用指南
 
-## 数据库
+### 1️⃣ 爬虫模块
 
-### PostgreSQL
+#### 基础请求
+
+```python
+from wauo import WauoSpider
+
+spider = WauoSpider()
+
+# GET 请求（默认）
+url = 'https://github.com/markadc'
+resp = spider.send(url)
+print(resp.text)
+```
+
+#### POST 请求
+
+```python
+from wauo import WauoSpider
+
+spider = WauoSpider()
+
+api = 'https://api.example.com/endpoint'
+payload = {
+    'key1': 'value1',
+    'key2': 'value2'
+}
+
+# 方式1：使用 data 参数
+resp = spider.send(api, data=payload)
+
+# 方式2：使用 json 参数
+resp = spider.send(api, json=payload)
+```
+
+#### 响应处理
+
+```python
+from wauo import WauoSpider
+
+spider = WauoSpider()
+resp = spider.send("https://www.baidu.com")
+
+# XPath 选择器
+title = resp.get_one("//title/text()")
+print(title)  # 输出：百度一下，你就知道
+
+# 获取所有匹配项
+links = resp.get_all("//a/@href")
+```
+
+#### 响应验证
+
+**检查状态码**
+
+```python
+resp = spider.send('https://github.com/markadc')
+# 如果响应码不在指定范围内则引发异常
+resp.raise_for_status(codes=[200, 301, 302])
+```
+
+**检查响应内容**
+
+```python
+def is_valid_response(html: str) -> bool:
+    """验证响应是否包含验证码"""
+    return html.find('验证') == -1
+
+resp = spider.send('https://wenku.baidu.com/wkvcode.html')
+# 如果 is_valid_response 返回 False 则引发异常
+resp.raise_for_text(validate=is_valid_response)
+```
+
+#### 设置默认请求头
+
+```python
+from wauo import WauoSpider
+
+# 为所有请求设置默认 Cookie
+cookie = 'Your Cookies Here'
+spider = WauoSpider(default_headers={'Cookie': cookie})
+
+resp1 = spider.send('https://github.com/markadc')
+resp2 = spider.send('https://github.com/markadc/wauo')
+
+# 两个请求都会自动携带 Cookie
+print(resp1.request.headers)
+print(resp2.request.headers)
+```
+
+### 2️⃣ 数据库模块
+
+#### PostgreSQL 数据库操作
 
 ```python
 from wauo.db import PostgresqlClient
 
+# 配置数据库连接
 psql_cfg = {
     "host": "localhost",
     "port": 5432,
@@ -34,244 +139,189 @@ psql_cfg = {
     "user": "wauo",
     "password": "admin1",
 }
+
+# 创建客户端并连接
 psql = PostgresqlClient(**psql_cfg)
 psql.connect()
 
-tname = 'temp'
+tname = 'users'
 
-# 删除表
+# 删除表（如果存在）
 psql.drop_table(tname)
-print(f"表 {tname} 已删除（如果存在）")
 
-# 创建新表
+# 创建表
 psql.create_table(tname, ['name', 'age'])
 
-# 插入数据
+# 插入单条数据
 n = psql.insert_one(tname, {'name': 'Alice', 'age': 30})
-print(f"插入的行数: {n}")
-psql.insert_many(tname, [{'name': 'Bob', 'age': 25}, {'name': 'Charlie', 'age': 35}])
-print(f"批量插入的行数: {n}")
+print(f"插入行数: {n}")
 
-# 查询数据
-lines = psql.query(f"SELECT * FROM {tname}")
-for line in lines:
-    print(dict(line))
+# 批量插入数据
+psql.insert_many(tname, [
+    {'name': 'Bob', 'age': 25},
+    {'name': 'Charlie', 'age': 35}
+])
+
+# 查询所有数据
+rows = psql.query(f"SELECT * FROM {tname}")
+for row in rows:
+    print(dict(row))
 
 # 更新数据
 n = psql.update(tname, {'age': 31}, "name = %s", ('Alice',))
-print(f"更新的行数: {n}")
+print(f"更新行数: {n}")
 
 # 删除数据
-psql.delete(tname, "name = %s", ('Bob',))
-print("删除了 Bob 的记录")
+n = psql.delete(tname, "name = %s", ('Bob',))
+print(f"删除行数: {n}")
 
+# 关闭连接
+psql.close()
 ```
 
-## 爬虫
+#### MySQL 数据库操作
 
 ```python
-from wauo import WauoSpider
+from wauo.db import MysqlClient
 
-spider = WauoSpider()
-```
-
-### 请求
-
-#### GET
-
-- 默认是get请求
-
-```python
-url = 'https://github.com/markadc'
-resp = spider.send(url)
-print(resp.text)
-```
-
-#### POST
-
-- 使用了`data`或者`json`参数，则是post请求
-
-```python
-api = 'https://github.com/markadc'
-payload = {
-    'key1': 'value1',
-    'key2': 'value2'
+# 配置类似 PostgreSQL
+mysql_cfg = {
+    "host": "localhost",
+    "port": 3306,
+    "db": "test",
+    "user": "root",
+    "password": "password",
 }
-resp = spider.send(api, data=payload)  # 使用data参数
-resp = spider.send(api, json=payload)  # 使用json参数
+
+mysql = MysqlClient(**mysql_cfg)
+mysql.connect()
+
+# 使用方法与 PostgreSQL 相同
+# ...
 ```
 
-### 响应
+### 3️⃣ 工具函数
 
-#### 响应对象
-
-- `SelectorResponse`
-
-```python
-resp = spider.send("https://www.baidu.com")
-title = resp.get_one("//title/text()")  # 等同于 resp.xpath("//title/text()").get()
-print(title)  # 输出：百度一下，你就知道
-
-```
-
-#### 校验响应
-
-限制响应码
-
-- 如果响应码不在 codes 范围里则引发异常
-
-```python
-resp = spider.send('https://github.com/markadc')
-resp.raise_for_status(codes=[301, 302])
-```
-
-限制响应内容
-
-- 如果 is_ok 返回 False 则引发异常
-
-```python
-def is_ok(html: str):
-    return html.find('验证') == -1
-
-
-resp = spider.send('https://wenku.baidu.com/wkvcode.html')
-resp.raise_for_text(validate=is_ok)
-```
-
-### 设置默认请求配置
-
-例子1
-
-- 每一次请求头都带上 Cookie 字段
-
-```python
-from wauo import WauoSpider
-
-cookie = 'Your Cookies'
-spider = WauoSpider(default_headers={'Cookie': cookie})
-resp1 = spider.send('https://github.com/markadc')
-resp2 = spider.send('https://github.com/markadc/wauo')
-print(resp1.request.headers)
-print(resp2.request.headers)
-```
-
-## 工具使用
-
-### 颜色输出
+#### 彩色输出
 
 ```python
 from wauo.printer import Printer
 
 p = Printer()
-p.red("This is a red message")
-p.green("This is a green message")
-p.yellow("This is a yellow message")
-p.blue("This is a blue message")
-p.output("This is a custom color message", "magenta")
+p.red("这是红色消息")
+p.green("这是绿色消息")
+p.yellow("这是黄色消息")
+p.blue("这是蓝色消息")
+p.output("自定义颜色消息", "magenta")
 ```
 
 ![_printer.png](_printer.png)
 
-### 函数参数类型强校验
-
-- type_check
-- 根据注解检查函数的参数类型，类型不一致则报错
+#### 类型强校验装饰器
 
 ```python
 from wauo.utils import type_check
 
-
 @type_check
 def add(x: int, y: int) -> int:
-    print(f'{x} + {y} = {x + y}')
+    """计算两个数的和"""
     return x + y
 
+# ✅ 正确调用
+result = add(1, 2)  # 返回 3
 
-# 正常
-add(1, 2)  # 1 + 2 = 3
-
-# 报错
-add(1, "2")  # 参数 'y' 应该是 <class 'int'> 而不是 <class 'str'>
-
+# ❌ 类型错误
+try:
+    add(1, "2")  # 引发异常：参数 'y' 应该是 <class 'int'> 而不是 <class 'str'>
+except TypeError as e:
+    print(f"错误: {e}")
 ```
 
-### 字典多层取值
-
-- nget
-- 字典多层取值，键不存在则返回设定的默认值
+#### 多层字典取值
 
 ```python
 from wauo.utils import nget
 
-item = {
-    "data": {
+data = {
+    "user": {
         "info": {
-            "user1": {"name": "Charo", "age": 18},
-            "user2": {"name": "Jack", "age": 20},
-            "user3": {"name": "Peter", "age": 22},
+            "profile": {
+                "name": "张三",
+                "age": 25
+            }
         }
     }
 }
 
-print(nget(item, "data.info.user1.name"))
-# Charo
+# 安全地获取深层嵌套的值
+name = nget(data, "user.info.profile.name")  # "张三"
+age = nget(data, "user.info.profile.age")    # 25
 
-print(nget(item, "data.info.user2.age"))
-# 20
+# 键不存在时返回默认值
+phone = nget(data, "user.info.contact.phone", failed="未提供")  # "未提供"
 
-print(nget(item, "data.info.user3"))
-# {'name': 'Peter', 'age': 22}
-
-print(nget(item, "data.info.user4", failed="不存在"))
-# 不存在
-
-print(nget(item, "data.info"))
-# {'user1': {'name': 'Charo', 'age': 18}, 'user2': {'name': 'Jack', 'age': 20}, 'user3': {'name': 'Peter', 'age': 22}}
-
+# 获取中间节点
+profile = nget(data, "user.info.profile")
+# {'name': '张三', 'age': 25}
 ```
 
-## 工具说明
+### 4️⃣ 线程池管理
 
-- 传入变量，可以直接打印该变量的字符串名称、实际值
+```python
+from wauo.pool import PoolWait
 
-- 时间戳转时间、时间转时间戳、获取今天任意时刻的时间戳
+def worker(task_id: int):
+    """工作函数"""
+    return f"Task {task_id} completed"
 
-- 字典多层取值，键不存在则返回设定的默认值
+# 创建线程池管理器
+pool = PoolWait(max_workers=10)
 
-- 处理线程任务，有序获取（先返回的靠前）所有线程的返回值（异常的线程、假值除外）
+# 提交任务
+for i in range(100):
+    pool.submit(worker, i)
 
-- 带颜色的打印函数
+# 等待所有任务完成并获取结果
+results = pool.get_results()
+for result in results:
+    print(result)
+```
 
-- 检查参数的注解，类型不一致则抛出异常
+## 🔄 更新历史
 
-- 封装的线程池（自带阻塞，不用担心溢出）
+- **v0.9.4.2** - 当前版本
+  - ✨ 新增 DB 模块，支持 MySQL 和 PostgreSQL 操作
+  - ✨ 新增 `jsonp2json` 静态方法
+  - ✨ 爬虫默认保持会话状态
+  - ✨ 新增 `get_uuid` 和 base64 加解密静态方法
+  - 🔄 优化 `send` 方法，增加 `delay` 参数支持
+  - ✨ 新增 `update_default_headers` 方法
+  - 📝 完善 `send` 方法注释
+- **早期版本**
+  - ✨ 添加装饰器函数集合
+  - ✨ 线程池管理器支持上下文管理
+  - ✨ `PoolWait` 和 `PoolMan` 线程池管理
+  - ✨ 彩色输出（Printer）模块
+  - 📝 多次参数优化和文档完善
 
-- ...
+## 📖 更多文档
 
-# 更新历史
+关于每个模块的详细使用方法：
 
-- 新增db，操作MySQL、PostgreSQL数据库
-- 新增`jsonp2json`静态方法
-- 爬虫默认保持会话状态
-- 新增`get_uuid`、`base64`加解密的静态方法
-- 删除`download_text`、`download_bdata`，合并为`download`
-- 新增`update_default_headers`方法
-- `make_md5`支持字符串、二进制参数，并且可以加盐
-- `send`方法加入`delay`参数，请求时可以设置延迟
-- 新增`tools`包、`spiders`包
-- 线程池管理者加入上下文，可以使用`with`了
-- 新增`get_results`方法，获取所有`fs`的返回值
-- 可以提前在send方法之前自定义延迟、超时
-- 线程池管理者新增`running`方法，可以用于判断任务状态
-- `send`方法加入详细注释
-- 新增`todos`方法、tools改为utils
-- `done`加入func_name参数，可以定位到具体是哪一个`线程函数`出现异常
-- `PoolWait`、`PoolMan`
-- 一些参数的变化（改名、补充注解）
-- 加入了一些装饰器函数
-- 补充`send`方法中`**kwargs`的说明
-- 新增`block`方法，可以进行阻塞
-- 一些优化
-- utils包新增`cget`方法，字典多层取值，KEY不存在则返回<default>
-- cprint参数有误则默认不加入颜色打印
-- 一些优化，新增raise_for_status、raise_for_text、do方法、函数文档模板修改等
+- [爬虫模块文档](docs/spiders.md)
+- [数据库模块文档](docs/database.md)
+- [线程池文档](docs/pool.md)
+- [工具函数文档](docs/utils.md)
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License
+
+## 👤 作者
+
+- **WangTuo** - [markadc@126.com](mailto:markadc@126.com)
+- GitHub: [markadc/wauo](https://github.com/markadc/wauo)
