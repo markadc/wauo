@@ -2,8 +2,6 @@
 
 🚀 一个功能强大且易于使用的 Python 工具库，集成了爬虫、装饰器、线程池、数据库操作等实用功能。
 
-[English](README_EN.md) | [中文](README.md)
-
 ## ✨ 核心特性
 
 - **🕷️ 爬虫模块** - 简化的 HTTP 请求、响应处理和数据提取
@@ -289,7 +287,8 @@ for result in results:
 
 ## 🔄 更新历史
 
-- **v0.9.4.2** - 当前版本
+- **v0.9.5** - 当前版本
+
   - ✨ 新增 DB 模块，支持 MySQL 和 PostgreSQL 操作
   - ✨ 新增 `jsonp2json` 静态方法
   - ✨ 爬虫默认保持会话状态
@@ -297,6 +296,7 @@ for result in results:
   - 🔄 优化 `send` 方法，增加 `delay` 参数支持
   - ✨ 新增 `update_default_headers` 方法
   - 📝 完善 `send` 方法注释
+
 - **早期版本**
   - ✨ 添加装饰器函数集合
   - ✨ 线程池管理器支持上下文管理
