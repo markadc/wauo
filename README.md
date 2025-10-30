@@ -150,6 +150,22 @@ psql.drop_table(tname)
 # 创建表
 psql.create_table(tname, ['name', 'age'])
 
+# 创建高级表（自动添加 id、created_at、updated_at）
+# 使用 create_great_table 创建带时间追踪的表
+psql.create_great_table('products', ['name', 'price', 'stock'])
+# 自动包含：
+# - id: 自增主键
+# - created_at: 新增数据时自动记录创建时间（不为NULL）
+# - updated_at: 修改数据时自动更新时间（初始为NULL，修改后才有值）
+
+# 时间追踪示例
+psql.insert_one('products', {'name': 'iPhone', 'price': '5999', 'stock': '100'})
+# 查询结果：id=1, created_at='2025-10-30 10:00:00', updated_at=NULL
+
+psql.update('products', {'price': '4999'}, "id = %s", (1,))
+# 查询结果：id=1, created_at='2025-10-30 10:00:00', updated_at='2025-10-30 11:30:00'
+# 通过 updated_at 可以判断数据是否被修改过！
+
 # 插入单条数据
 n = psql.insert_one(tname, {'name': 'Alice', 'age': 30})
 print(f"插入行数: {n}")
@@ -287,7 +303,15 @@ for result in results:
 
 ## 🔄 更新历史
 
-- **v0.9.5** - 当前版本
+- **v0.9.6** - 最新版本
+
+  - ✨ PostgreSQL 新增 `create_great_table` 方法
+    - 自动创建 id 主键（自增）
+    - 自动添加 created_at 时间戳（新增时触发）
+    - 自动添加 updated_at 时间戳（修改时触发）
+    - 自动创建数据库触发器，实现时间字段自动更新
+
+- **v0.9.5**
 
   - ✨ 新增 DB 模块，支持 MySQL 和 PostgreSQL 操作
   - ✨ 新增 `jsonp2json` 静态方法

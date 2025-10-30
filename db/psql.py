@@ -9,16 +9,7 @@ from psycopg2.pool import ThreadedConnectionPool
 class PostgresqlClient:
     """PostgreSQL 客户端（连接池）"""
 
-    def __init__(
-            self,
-            host='localhost',
-            port=5432,
-            db: str = None,
-            user: str = None,
-            password: str = None,
-            minconn=1,
-            maxconn=10
-    ):
+    def __init__(self, host="localhost", port=5432, db: str = None, user: str = None, password: str = None, minconn=1, maxconn=10):
         self.host = host
         self.port = port
         self.db = db
@@ -31,15 +22,7 @@ class PostgresqlClient:
     def connect(self):
         """初始化连接池"""
         try:
-            self.pool = ThreadedConnectionPool(
-                minconn=self.minconn,
-                maxconn=self.maxconn,
-                host=self.host,
-                port=self.port,
-                dbname=self.db,
-                user=self.user,
-                password=self.password
-            )
+            self.pool = ThreadedConnectionPool(minconn=self.minconn, maxconn=self.maxconn, host=self.host, port=self.port, dbname=self.db, user=self.user, password=self.password)
             log.debug(f"连接池初始化成功，最大连接数：{self.maxconn}")
         except OperationalError as e:
             log.debug(f"连接池初始化失败: {e}")
@@ -100,8 +83,8 @@ class PostgresqlClient:
 
     def insert_one(self, table: str, data: dict):
         """插入单条"""
-        columns = ', '.join(data.keys())
-        values = ', '.join(['%s'] * len(data))
+        columns = ", ".join(data.keys())
+        values = ", ".join(["%s"] * len(data))
         query = f"INSERT INTO {table} ({columns}) VALUES ({values})"
         return self.execute(query, tuple(data.values()))
 
@@ -115,8 +98,8 @@ class PostgresqlClient:
             if set(item.keys()) != first_keys:
                 raise ValueError("所有记录的字段必须一致")
 
-        columns = ', '.join(datas[0].keys())
-        values = ', '.join(['%s'] * len(datas[0]))
+        columns = ", ".join(datas[0].keys())
+        values = ", ".join(["%s"] * len(datas[0]))
         query = f"INSERT INTO {table} ({columns}) VALUES ({values})"
         params = [tuple(item.values()) for item in datas]
 
@@ -128,7 +111,7 @@ class PostgresqlClient:
 
     def update(self, table: str, updated: dict, where_clause, where_params=None):
         """更新"""
-        set_clause = ', '.join([f"{k} = %s" for k in updated.keys()])
+        set_clause = ", ".join([f"{k} = %s" for k in updated.keys()])
         query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
         params = tuple(updated.values()) + (where_params or ())
         with self.connection() as conn:
@@ -158,7 +141,7 @@ class PostgresqlClient:
     def create_table(self, name: str, fields: list[str]):
         """创建表"""
         field_defs = [f'"{field}" VARCHAR(255)' for field in fields]
-        fields_sql = ', '.join(field_defs)
+        fields_sql = ", ".join(field_defs)
         sql = f'CREATE TABLE public."{name}" (id SERIAL PRIMARY KEY, {fields_sql})'
         self.execute(sql)
         log.success(f"表 {name} 创建成功")
@@ -167,3 +150,77 @@ class PostgresqlClient:
         """删除表"""
         sql = f'DROP TABLE IF EXISTS {schema}."{name}"'
         self.execute(sql)
+        log.success(f"✅ 表 {name} 删除成功")
+
+    def create_great_table(self, name: str, fields: list[str]):
+        """
+        创建表
+        - 额外包含 id 主键、created_at 和 updated_at 字段
+        - 数据新增时，created_at 自动设置为当前时间
+        - 数据更新时，updated_at 自动设置为当前时间
+
+        Args:
+            name: 表名
+            fields: 字段列表，每个字段名，默认类型为varchar(255)
+        """
+        if not name or not name.strip():
+            raise ValueError("表名不能为空")
+
+        if not fields or not all(isinstance(f, str) and f.strip() for f in fields):
+            raise ValueError("字段列表不能为空且必须为字符串")
+
+        field_defs = [f'"{field}" VARCHAR(255)' for field in fields]
+        fields_sql = ", ".join(field_defs) if field_defs else ""
+
+        if fields_sql:
+            sql = f"""
+            CREATE TABLE public."{name}" (
+                id SERIAL PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP,
+                {fields_sql}
+            )
+            """
+        else:
+            sql = f"""
+            CREATE TABLE public."{name}" (
+                id SERIAL PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP
+            )
+            """
+
+        # 创建表
+        self.execute(sql)
+
+        # 创建触发器函数（如果不存在）
+        trigger_func_sql = """
+        CREATE OR REPLACE FUNCTION update_updated_at_column()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            NEW.updated_at = CURRENT_TIMESTAMP;
+            RETURN NEW;
+        END;
+        $$ language 'plpgsql';
+        """
+        self.execute(trigger_func_sql)
+
+        # 为表创建触发器（BEFORE UPDATE）
+        trigger_sql = f"""
+        CREATE TRIGGER update_{name}_updated_at
+        BEFORE UPDATE ON public."{name}"
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+        """
+        self.execute(trigger_sql)
+
+        log.success(f"✅ 表 {name} 创建成功")
+
+
+if __name__ == "__main__":
+    psql = PostgresqlClient(host="localhost", port=5432, db="my", user="wauo", password="admin1")
+    psql.connect()
+    name = "acc"
+    psql.create_great_table(name, ["username", "password"])
+    input(f"按回车键删除表 {name}...")
+    psql.drop_table(name)
