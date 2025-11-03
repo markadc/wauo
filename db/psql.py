@@ -156,8 +156,8 @@ class PostgresqlClient:
         """
         创建表
         - 额外包含 id 主键、created_at 和 updated_at 字段
-        - 数据新增时，created_at 自动设置为当前时间
-        - 数据更新时，updated_at 自动设置为当前时间
+        - 数据新增时，created_at 自动设置为当前时间（精确到秒）
+        - 数据更新时，updated_at 自动设置为当前时间（精确到秒）
 
         Args:
             name: 表名
@@ -172,21 +172,22 @@ class PostgresqlClient:
         field_defs = [f'"{field}" VARCHAR(255)' for field in fields]
         fields_sql = ", ".join(field_defs) if field_defs else ""
 
+        # 时间字段放在最后，精度为秒 TIMESTAMP(0)
         if fields_sql:
             sql = f"""
             CREATE TABLE public."{name}" (
                 id SERIAL PRIMARY KEY,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP,
-                {fields_sql}
+                {fields_sql},
+                created_at TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP(0)
             )
             """
         else:
             sql = f"""
             CREATE TABLE public."{name}" (
                 id SERIAL PRIMARY KEY,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP
+                created_at TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP(0)
             )
             """
 
@@ -194,11 +195,12 @@ class PostgresqlClient:
         self.execute(sql)
 
         # 创建触发器函数（如果不存在）
+        # TIMESTAMP(0) 表示精度到秒
         trigger_func_sql = """
         CREATE OR REPLACE FUNCTION update_updated_at_column()
         RETURNS TRIGGER AS $$
         BEGIN
-            NEW.updated_at = CURRENT_TIMESTAMP;
+            NEW.updated_at = CURRENT_TIMESTAMP::TIMESTAMP(0);
             RETURN NEW;
         END;
         $$ language 'plpgsql';
