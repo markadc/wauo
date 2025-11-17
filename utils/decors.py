@@ -9,11 +9,18 @@ from loguru import logger
 
 
 def monitor(interval: int, tip: str):
-    """监视器（守护线程）"""
+    """
+    监视器
+    - 把函数包装成守护线程，周期性执行
 
-    def decorator(func):
+    Args:
+        interval: 执行间隔（秒）
+        tip: 提示信息（异常日志的前缀）
+    """
+
+    def outer(func):
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def _monitor(*args, **kwargs):
             def task():
                 while True:
                     try:
@@ -26,16 +33,16 @@ def monitor(interval: int, tip: str):
             t.daemon = True
             t.start()
 
-        return wrapper
+        return _monitor
 
-    return decorator
+    return outer
 
 
 def type_check(func):
     """检查参数的注解，类型不一致则抛出异常"""
 
     @wraps(func)
-    def inner(*args, **kwargs):
+    def _type_check(*args, **kwargs):
         sig = inspect.signature(func)
         bound_args = sig.bind(*args, **kwargs)
         bound_args.apply_defaults()
@@ -48,25 +55,28 @@ def type_check(func):
             if expected != inspect.Parameter.empty:
                 if default_value == inspect.Parameter.empty:
                     if not isinstance(value, expected):
-                        raise TypeError(
-                            f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}"
-                        )
+                        raise TypeError(f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}")
                 if value != default_value and not isinstance(value, expected):
-                    raise TypeError(
-                        f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}"
-                    )
+                    raise TypeError(f"参数 '{name}' 应该是 {expected} 而不是 {type(value)}")
 
         return func(*args, **kwargs)
 
-    return inner
+    return _type_check
 
 
 def forever(interval=60, errback: Callable = None):
-    """永远在运行"""
+    """
+    重复运行这个函数
+    - 当函数异常时，输出异常信息，并等待 interval 秒后重新启动
+
+    Args:
+        interval: 执行间隔（秒）
+        errback: 异常回调函数
+    """
 
     def outer(func):
         @wraps(func)
-        def inner(*args, **kwargs):
+        def _forever(*args, **kwargs):
             while True:
                 try:
                     func(*args, **kwargs)
@@ -79,31 +89,45 @@ def forever(interval=60, errback: Callable = None):
                 finally:
                     time.sleep(interval)
 
-        return inner
+        return _forever
 
     return outer
 
 
-def safe(func, failed=False):
-    """异常时返回 failed 的值"""
+def safe(func, failed="error"):
+    """
+    安全地执行函数
+    - 当函数异常时，输出异常信息，并返回 failed 的值
+
+    Args:
+        failed: 异常时的返回值（默认 "error"）
+    """
 
     @wraps(func)
-    def inner(*args, **kwargs):
+    def _safe(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
             logger.error("{} | {}".format(e, func.__name__))
             return failed
 
-    return inner
+    return _safe
 
 
-def retry(times=5, rest=2, is_raise=True, failed=False):
-    """重试（当函数异常时，触发重试，重试全部失败时返回 failed 的值）"""
+def retry(times=5, rest=2, is_raise=True, failed="error"):
+    """
+    重试
+
+    Args:
+        times: 重试次数（默认 5 次）
+        rest: 每次重试前的等待时间（默认 2 秒）
+        is_raise: 重试全部失败后，是否抛出异常（默认 True）
+        failed: 重试全部失败后，函数的返回值（仅当 is_raise 为 False 时有效）
+    """
 
     def outer(func):
         @wraps(func)
-        def inner(*args, **kwargs):
+        def _retry(*args, **kwargs):
             for i in range(times + 1):
                 try:
                     return func(*args, **kwargs)
@@ -115,26 +139,7 @@ def retry(times=5, rest=2, is_raise=True, failed=False):
             logger.critical("重试全部失败 | {}".format(func.__name__))
             return failed
 
-        return inner
-
-    return outer
-
-
-def min_work(seconds: int):
-    """最少运行多少秒"""
-
-    def outer(func):
-        begin = time.time()
-
-        @wraps(func)
-        def inner(*args, **kwargs):
-            result = None
-            while True:
-                if time.time() - begin >= seconds:
-                    return result
-                result = func(*args, **kwargs)
-
-        return inner
+        return _retry
 
     return outer
 
@@ -143,22 +148,11 @@ def timer(func):
     """计时器（输出函数的执行时间）"""
 
     @wraps(func)
-    def inner(*args, **kwargs):
+    def _timer(*args, **kwargs):
         t1 = time.time()
         result = func(*args, **kwargs)
         t2 = time.time()
-        logger.info("{} 耗时 {:.4f} 秒".format(func.__name__, t2 - t1))
+        logger.info(f"Function <{func.__name__}> cost {t2 - t1:.4f} seconds")
         return result
 
-    return inner
-
-
-def defer(func):
-    """延迟1-2秒后调用"""
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        time.sleep(random.uniform(1, 2))
-        return func(*args, **kwargs)
-
-    return inner
+    return _timer
