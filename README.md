@@ -281,24 +281,58 @@ profile = nget(data, "user.info.profile")
 
 ### 4️⃣ 线程池管理
 
+**智能线程池 - SmartThreadPool**
+
+`SmartThreadPool` 是一个智能线程池，当任务提交数达到最大并发数时会自动阻塞，直到有线程执行完成释放资源。这样可以有效防止内存溢出。
+
+#### 方式 1：使用 submit 提交任务
+
 ```python
-from wauo.pool import PoolWait
+from wauo.pool import SmartThreadPool
+import time
 
-def worker(task_id: int):
-    """工作函数"""
-    return f"Task {task_id} completed"
+def job(i):
+    print(f"{i} 执行中...")
+    time.sleep(2)
+    print(f"✅ {i} 已完成")
+    return i * 2
 
-# 创建线程池管理器
-pool = PoolWait(max_workers=10)
+# 使用上下文管理器
+with SmartThreadPool(max_workers=5) as pool:
+    for i in range(10):
+        pool.submit(job, i)
+```
 
-# 提交任务
-for i in range(100):
-    pool.submit(worker, i)
+#### 方式 2：使用 map 批量处理（推荐）
 
-# 等待所有任务完成并获取结果
-results = pool.get_results()
-for result in results:
-    print(result)
+```python
+from wauo.pool import SmartThreadPool
+
+def job(i):
+    # 处理任务
+    return i * 2
+
+# map 方法会按完成顺序返回结果（先完成的先返回）
+with SmartThreadPool(max_workers=10) as pool:
+    results = pool.map(job, range(100))
+    for result in results:
+        print(result)
+```
+
+#### 方式 3：获取任务返回值
+
+```python
+from wauo.pool import SmartThreadPool
+
+def job(i):
+    return i ** 2
+
+# 按提交顺序获取结果
+with SmartThreadPool(max_workers=5) as pool:
+    futures = [pool.submit(job, i) for i in range(10)]
+    for future in futures:
+        result = future.result()  # 阻塞直到任务完成
+        print(result)
 ```
 
 ## 🔄 更新历史

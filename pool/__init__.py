@@ -1,1 +1,1 @@
-from wauo.pool.thread_pool import LimitedThreadPool
+from wauo.pool.thread_pool import SmartThreadPool
