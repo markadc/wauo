@@ -337,7 +337,18 @@ with SmartThreadPool(max_workers=5) as pool:
 
 ## 🔄 更新历史
 
-- **v0.9.6** - 最新版本
+- **v0.9.7** - 最新版本
+
+  - 🐛 修复 `raise_has_text` / `raise_no_text` 错误的 `assert` 用法，现在能正确抛出 `ResponseTextError`
+  - 🐛 修复 `PoolWait` 中 `running_futures` 列表在每批任务完成后未清理，导致内存持续增长
+  - 🐛 修复日志中 `retey_times` 拼写错误
+  - ♻️ 删除 `WauoSpider.__init__` 冗余代码（与父类完全重复）
+  - ♻️ `cookie_to_dict` 避免对同一字符串重复 `split`
+  - ♻️ `nget` 逻辑简化，去掉多余的 `enumerate` 和早返回
+  - ♻️ `db/mysql.py` 提取公共方法 `_check_sql` / `_check_table` / `_build_insert_sql`，消除重复代码
+  - ⚡ `make_ua` 更新 Chrome 版本范围（55-62 → 110-124）及 OS 列表，生成的 UA 更贴近现代浏览器
+
+- **v0.9.6**
 
   - ✨ PostgreSQL 新增 `create_great_table` 方法
     - 自动创建 id 主键（自增）

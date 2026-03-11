@@ -93,11 +93,12 @@ class SpiderTools:
     @staticmethod
     def cookie_to_dict(cookie: str) -> dict:
         """Cookie转换为dict类型"""
-        return {
-            kv.split("=", 1)[0]: kv.split("=", 1)[1]
-            for kv in cookie.split("; ")
-            if "=" in kv
-        }
+        result = {}
+        for kv in cookie.split("; "):
+            if "=" in kv:
+                k, v = kv.split("=", 1)
+                result[k] = v
+        return result
 
     @staticmethod
     def save_file(path: str, content: str | bytes, encoding="UTF-8"):
@@ -237,25 +238,6 @@ class WauoSpider(BaseSpider):
     - 文件下载功能
     """
 
-    def __init__(
-            self,
-            is_session=True,
-            default_headers: dict = None,
-            default_proxies: dict = None,
-            default_delay=0,
-            default_timeout=5,
-            ua_way="local",
-    ):
-        super().__init__(
-            is_session=is_session,
-            default_headers=default_headers,
-            ua_way=ua_way,
-            default_proxies=default_proxies,
-            default_delay=default_delay,
-            default_timeout=default_timeout,
-        )
-        self.is_raise_error = True
-
     def do(
             self,
             url: str,
@@ -319,7 +301,7 @@ class WauoSpider(BaseSpider):
                     f"""
                     url             {url}
                     error           {e} => {type(e)}
-                    retey_times     {i}/{retry_times}
+                    retry_times     {i}/{retry_times}
                     """
                 )
                 time.sleep(retry_delay)

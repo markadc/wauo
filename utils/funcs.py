@@ -51,15 +51,10 @@ def timef(ts: int | float) -> str:
 def nget(src: dict, keys: str, failed=None):
     """字典多层取值，key 不存在则返回 failed 的值"""
     temp = src
-    args = keys.split('.')
-    for i, a in enumerate(args):
-        if a not in temp:
+    for a in keys.split('.'):
+        if not isinstance(temp, dict) or a not in temp:
             return failed
-        temp = temp.get(a)
-        if i == len(args) - 1:
-            return temp
-        if not isinstance(temp, dict):
-            return failed
+        temp = temp[a]
     return temp
 
 
@@ -121,13 +116,14 @@ def cprint(content, color=None):
 
 def make_ua():
     """随机User-Agent"""
-    a = random.randint(55, 62)
-    c = random.randint(0, 3200)
-    d = random.randint(0, 150)
+    a = random.randint(110, 124)
+    c = random.randint(0, 6000)
+    d = random.randint(0, 200)
     os_type = [
-        '(Windows NT 6.1; WOW64)', '(Windows NT 10.0; WOW64)',
+        '(Windows NT 10.0; Win64; x64)',
+        '(Windows NT 10.0; WOW64)',
         '(X11; Linux x86_64)',
-        '(Macintosh; Intel Mac OS X 10_12_6)'
+        '(Macintosh; Intel Mac OS X 10_15_7)',
     ]
     chrome_version = f'Chrome/{a}.0.{c}.{d}'
     os_choice = random.choice(os_type)

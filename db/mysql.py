@@ -139,10 +139,22 @@ class MysqlClient:
             if conn:
                 conn.close()
 
-    def execute(self, sql: str, args: tuple | list | None = None) -> int:
-        """执行SQL语句"""
+    def _check_sql(self, sql: str):
         if not sql or not sql.strip():
             raise ValueError("SQL语句不能为空")
+
+    def _check_table(self, table: str):
+        if not table or not table.strip():
+            raise ValueError("表名不能为空")
+
+    def _build_insert_sql(self, table: str, item: dict) -> tuple[str, tuple]:
+        columns = list(item.keys())
+        sql = f"INSERT INTO `{table}` ({', '.join(f'`{col}`' for col in columns)}) VALUES ({', '.join(['%s'] * len(columns))})"
+        return sql, tuple(item.values())
+
+    def execute(self, sql: str, args: tuple | list | None = None) -> int:
+        """执行SQL语句"""
+        self._check_sql(sql)
 
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
@@ -151,8 +163,7 @@ class MysqlClient:
 
     def fetchone(self, sql: str, args: tuple = None) -> dict:
         """获取单条记录"""
-        if not sql or not sql.strip():
-            raise ValueError("SQL语句不能为空")
+        self._check_sql(sql)
 
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
@@ -161,8 +172,7 @@ class MysqlClient:
 
     def fetchall(self, sql: str, args: tuple = None) -> list[dict]:
         """获取所有记录"""
-        if not sql or not sql.strip():
-            raise ValueError("SQL语句不能为空")
+        self._check_sql(sql)
 
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
@@ -171,8 +181,7 @@ class MysqlClient:
 
     def fetchmany(self, sql: str, args: tuple = None, n=2) -> list[dict]:
         """获取多条记录"""
-        if not sql or not sql.strip():
-            raise ValueError("SQL语句不能为空")
+        self._check_sql(sql)
 
         with self.get_connection() as conn:
             with conn.cursor() as cursor:
@@ -185,17 +194,11 @@ class MysqlClient:
             logger.warning("插入数据为空")
             return 0
 
-        if not table or not table.strip():
-            raise ValueError("表名不能为空")
+        self._check_table(table)
 
         try:
-            columns = list(item.keys())
-            placeholders = ["%s"] * len(columns)
-            values = list(item.values())
-
-            sql = f"INSERT INTO `{table}` ({', '.join(f'`{col}`' for col in columns)}) VALUES ({', '.join(placeholders)})"
-
-            return self.execute(sql, tuple(values))
+            sql, values = self._build_insert_sql(table, item)
+            return self.execute(sql, values)
         except Exception as e:
             logger.error(f"插入单条记录失败: {e}")
             raise
@@ -206,16 +209,11 @@ class MysqlClient:
             logger.warning("批量插入数据为空")
             return 0
 
-        if not table or not table.strip():
-            raise ValueError("表名不能为空")
+        self._check_table(table)
 
         try:
-            columns = list(items[0].keys())
-            placeholders = ["%s"] * len(columns)
-
-            sql = f"INSERT INTO `{table}` ({', '.join(f'`{col}`' for col in columns)}) VALUES ({', '.join(placeholders)})"
-
-            values_list = [tuple(data[col] for col in columns) for data in items]
+            sql, _ = self._build_insert_sql(table, items[0])
+            values_list = [tuple(data[col] for col in items[0].keys()) for data in items]
 
             with self.get_connection() as conn:
                 with conn.cursor() as cursor:
@@ -237,27 +235,19 @@ class MysqlClient:
             logger.warning("更新数据为空")
             return 0
 
-        if not table or not table.strip():
-            raise ValueError("表名不能为空")
+        self._check_table(table)
 
         if not where or not where.strip():
             raise ValueError("WHERE条件不能为空")
 
         try:
-            set_clauses = []
-            values = []
-
-            for column, value in item.items():
-                set_clauses.append(f"`{column}` = %s")
-                values.append(value)
+            set_clauses = [f"`{col}` = %s" for col in item]
+            values = list(item.values())
 
             sql = f"UPDATE `{table}` SET {', '.join(set_clauses)} WHERE {where}"
 
             if args:
-                if isinstance(args, (list, tuple)):
-                    values.extend(args)
-                else:
-                    values.append(args)
+                values.extend(args if isinstance(args, (list, tuple)) else [args])
 
             return self.execute(sql, tuple(values))
         except Exception as e:
@@ -266,8 +256,7 @@ class MysqlClient:
 
     def delete(self, table: str, where: str, args: tuple | list | None = None) -> int:
         """删除记录"""
-        if not table or not table.strip():
-            raise ValueError("表名不能为空")
+        self._check_table(table)
 
         if not where or not where.strip():
             raise ValueError("WHERE条件不能为空")
@@ -329,14 +318,12 @@ class MysqlClient:
             fields: 字段列表，每个字段名，默认类型为varchar(255)
             gen_id: 是否生成自增ID字段
         """
-        if not name or not name.strip():
-            raise ValueError("表名不能为空")
+        self._check_table(name)
 
         if not fields or not all(isinstance(f, str) and f.strip() for f in fields):
             raise ValueError("字段列表不能为空且必须为字符串")
 
         try:
-            # 将字段名转换为varchar(255)格式
             field_definitions = [f"`{field.strip()}` VARCHAR(255)" for field in fields]
 
             if gen_id:

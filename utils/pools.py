@@ -67,6 +67,7 @@ class PoolWait(BasePool):
         """核心"""
         if self.count >= self.max_count:
             _wait(self.running_futures)
+            self.running_futures.clear()
             self.count = 0
         future = self.record(func, *args, **kwargs)
         future.add_done_callback(partial(self.done, func.__name__))
